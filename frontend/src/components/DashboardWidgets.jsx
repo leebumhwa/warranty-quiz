@@ -152,7 +152,7 @@ export function NoticesWidget() {
         <ul style={{ listStyle: 'none', marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {notices.map(n => (
             <li key={n.id} style={{ borderLeft: '2px solid var(--primary)', paddingLeft: '10px' }}>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text)', lineHeight: 1.45 }}>{n.content}</div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text)', lineHeight: 1.45, whiteSpace: 'pre-wrap' }}>{n.content}</div>
               <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>{fmt(n.created_at)}</div>
             </li>
           ))}

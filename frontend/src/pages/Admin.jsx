@@ -553,7 +553,7 @@ export default function Admin() {
                     ) : (
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: '0.9rem', lineHeight: 1.5, color: 'var(--text)' }}>{n.content}</div>
+                          <div style={{ fontSize: '0.9rem', lineHeight: 1.5, color: 'var(--text)', whiteSpace: 'pre-wrap' }}>{n.content}</div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
                             {new Date(n.created_at).toLocaleString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                           </div>
