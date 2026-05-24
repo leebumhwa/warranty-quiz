@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
+import DashboardWidgets from '../components/DashboardWidgets';
 
 function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -22,6 +23,7 @@ export default function Dashboard() {
 
   return (
     <div className="page">
+      <DashboardWidgets />
       <h1 className="page-title">퀴즈 목록</h1>
       <p className="page-subtitle">아래 퀴즈 중 하나를 선택하여 시작하세요.</p>
       {error && <div className="alert alert-error">{error}</div>}
