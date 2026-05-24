@@ -141,6 +141,30 @@ const db = {
     return !error;
   },
 
+  // Notices
+  async getNotices() {
+    const { data } = await supabase.from('notices')
+      .select('id, content, created_at')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
+    return data || [];
+  },
+  async getAllNotices() {
+    const { data } = await supabase.from('notices')
+      .select('id, content, is_active, created_at, created_by')
+      .order('created_at', { ascending: false });
+    return data || [];
+  },
+  async createNotice(content, createdBy) {
+    const { data } = await supabase.from('notices')
+      .insert({ content, created_by: createdBy })
+      .select().single();
+    return data;
+  },
+  async deleteNotice(id) {
+    await supabase.from('notices').delete().eq('id', parseInt(id));
+  },
+
   // Questions
   async updateQuestion(id, updates) {
     const { data } = await supabase.from(QUIZ_ITEM)

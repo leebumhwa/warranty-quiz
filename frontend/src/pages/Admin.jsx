@@ -16,6 +16,9 @@ export default function Admin() {
   const [quizzes, setQuizzes] = useState([]);
   const [allResults, setAllResults] = useState([]);
   const [reports, setReports] = useState([]);
+  const [notices, setNotices] = useState([]);
+  const [noticeInput, setNoticeInput] = useState('');
+  const [noticeMsg, setNoticeMsg] = useState('');
   const [expandedQuiz, setExpandedQuiz] = useState(null);
   const [quizQuestions, setQuizQuestions] = useState({});
   const [editingQuestion, setEditingQuestion] = useState(null);
@@ -41,8 +44,9 @@ export default function Admin() {
   const loadQuizzes = () => api.get('/quizzes').then(r => setQuizzes(r.data.quizzes)).catch(() => {});
   const loadResults = () => api.get('/results/all').then(r => setAllResults(r.data.results)).catch(() => {});
   const loadReports = () => api.get('/quizzes/reports').then(r => setReports(r.data.reports)).catch(() => {});
+  const loadNotices = () => api.get('/notices').then(r => setNotices(r.data.notices)).catch(() => {});
 
-  useEffect(() => { loadFiles(); loadQuizzes(); loadResults(); loadReports(); }, []);
+  useEffect(() => { loadFiles(); loadQuizzes(); loadResults(); loadReports(); loadNotices(); }, []);
 
   // --- File management ---
   const handleUpload = async (e) => {
@@ -150,7 +154,7 @@ export default function Admin() {
     <div className="page">
       <h1 className="page-title">관리자 패널</h1>
       <div className="tabs">
-        {[['files','파일 관리'],['generate','퀴즈 생성'],['quizzes','퀴즈 관리'],['results','사용자 결과'],['reports',`신고 관리${reports.filter(r=>!r.resolved).length > 0 ? ` (${reports.filter(r=>!r.resolved).length})` : ''}`]].map(([key,label]) => (
+        {[['files','파일 관리'],['generate','퀴즈 생성'],['quizzes','퀴즈 관리'],['results','사용자 결과'],['reports',`신고 관리${reports.filter(r=>!r.resolved).length > 0 ? ` (${reports.filter(r=>!r.resolved).length})` : ''}`],['notices','보증 소식']].map(([key,label]) => (
           <button key={key} className={`tab-btn ${tab===key?'active':''}`} onClick={() => setTab(key)}>{label}</button>
         ))}
       </div>
@@ -481,6 +485,67 @@ export default function Admin() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+      {/* Notices tab */}
+      {tab === 'notices' && (
+        <div style={{ maxWidth: '600px' }}>
+          <div className="card mb-4">
+            <div className="card-title">📢 보증 소식 등록</div>
+            <p className="text-sm text-muted mb-4">등록한 소식은 대시보드 사이드바에 즉시 표시됩니다.</p>
+            {noticeMsg && <div className={`alert ${noticeMsg.includes('실패') ? 'alert-error' : 'alert-success'}`}>{noticeMsg}</div>}
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+              <textarea
+                className="form-textarea"
+                placeholder="소식 내용을 입력하세요. (예: 2025년 보증 정책이 업데이트되었습니다.)"
+                value={noticeInput}
+                onChange={e => setNoticeInput(e.target.value)}
+                rows={3}
+                style={{ flex: 1 }}
+              />
+              <button className="btn btn-primary" style={{ flexShrink: 0 }} onClick={async () => {
+                if (!noticeInput.trim()) return;
+                try {
+                  await api.post('/notices', { content: noticeInput.trim() });
+                  setNoticeInput('');
+                  setNoticeMsg('소식이 등록되었습니다.');
+                  loadNotices();
+                  setTimeout(() => setNoticeMsg(''), 3000);
+                } catch {
+                  setNoticeMsg('등록에 실패했습니다.');
+                }
+              }}>등록</button>
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-title">등록된 소식 ({notices.length}개)</div>
+            {notices.length === 0 ? (
+              <div className="empty-state" style={{ padding: '24px' }}>등록된 소식이 없습니다.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {notices.map(n => (
+                  <div key={n.id} style={{
+                    display: 'flex', alignItems: 'flex-start', gap: '12px',
+                    padding: '12px 14px', background: 'var(--bg)',
+                    borderRadius: 'var(--radius)', borderLeft: '3px solid var(--primary)'
+                  }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '0.9rem', lineHeight: 1.5, color: 'var(--text)' }}>{n.content}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                        {new Date(n.created_at).toLocaleString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+                    <button className="btn btn-danger btn-sm" style={{ flexShrink: 0 }} onClick={async () => {
+                      if (!window.confirm('이 소식을 삭제하시겠습니까?')) return;
+                      await api.delete(`/notices/${n.id}`);
+                      loadNotices();
+                    }}>삭제</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

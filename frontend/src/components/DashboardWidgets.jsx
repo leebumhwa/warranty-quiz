@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import api from '../api';
 
 const WMO = {
   0: ['맑음', '☀️'], 1: ['대체로 맑음', '🌤️'], 2: ['구름 조금', '⛅'], 3: ['흐림', '☁️'],
@@ -124,6 +125,38 @@ export function WeatherWidget() {
             <span>💨 {Math.round(weather.wind_speed_10m)} km/h</span>
           </div>
         </>
+      )}
+    </div>
+  );
+}
+
+export function NoticesWidget() {
+  const [notices, setNotices] = useState([]);
+
+  useEffect(() => {
+    api.get('/notices').then(r => setNotices(r.data.notices)).catch(() => {});
+  }, []);
+
+  const fmt = (d) => new Date(d).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+
+  return (
+    <div className="widget-card">
+      <div className="widget-label" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+        📢 보증 소식
+      </div>
+      {notices.length === 0 ? (
+        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '8px', textAlign: 'center', padding: '8px 0' }}>
+          등록된 소식이 없습니다.
+        </div>
+      ) : (
+        <ul style={{ listStyle: 'none', marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {notices.map(n => (
+            <li key={n.id} style={{ borderLeft: '2px solid var(--primary)', paddingLeft: '10px' }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text)', lineHeight: 1.45 }}>{n.content}</div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>{fmt(n.created_at)}</div>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

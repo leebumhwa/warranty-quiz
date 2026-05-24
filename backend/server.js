@@ -23,6 +23,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/files', require('./routes/files'));
 app.use('/api/quizzes', require('./routes/quizzes'));
 app.use('/api/results', require('./routes/results'));
+app.use('/api/notices', require('./routes/notices'));
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
