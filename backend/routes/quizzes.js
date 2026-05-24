@@ -30,6 +30,7 @@ async function callOpenRouter(prompt) {
     body: JSON.stringify({
       model,
       max_tokens: 1500,
+      temperature: 1.0,
       messages: [{ role: 'user', content: prompt }],
     }),
   });
@@ -82,6 +83,8 @@ router.post('/generate', authenticate, requireAdmin, async (req, res) => {
 - 문서 내용에 근거한 문제만 출제
 - 명확하고 이해하기 쉬운 문제 작성
 - 반드시 ${count}개 작성
+- 매번 다른 관점(정의, 조건, 절차, 예외, 수치 등)에서 다양하게 출제할 것
+- 이전에 자주 나온 표현이나 문제 유형을 피하고 새로운 각도로 출제할 것
 
 문서 내용:
 ${content}`;
