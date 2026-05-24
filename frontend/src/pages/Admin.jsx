@@ -19,6 +19,8 @@ export default function Admin() {
   const [notices, setNotices] = useState([]);
   const [noticeInput, setNoticeInput] = useState('');
   const [noticeMsg, setNoticeMsg] = useState('');
+  const [editingNotice, setEditingNotice] = useState(null);
+  const [editNoticeValue, setEditNoticeValue] = useState('');
   const [expandedQuiz, setExpandedQuiz] = useState(null);
   const [quizQuestions, setQuizQuestions] = useState({});
   const [editingQuestion, setEditingQuestion] = useState(null);
@@ -526,21 +528,46 @@ export default function Admin() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {notices.map(n => (
                   <div key={n.id} style={{
-                    display: 'flex', alignItems: 'flex-start', gap: '12px',
                     padding: '12px 14px', background: 'var(--bg)',
                     borderRadius: 'var(--radius)', borderLeft: '3px solid var(--primary)'
                   }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '0.9rem', lineHeight: 1.5, color: 'var(--text)' }}>{n.content}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                        {new Date(n.created_at).toLocaleString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    {editingNotice === n.id ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <textarea
+                          className="form-textarea"
+                          rows={3}
+                          value={editNoticeValue}
+                          onChange={e => setEditNoticeValue(e.target.value)}
+                          style={{ fontSize: '0.875rem' }}
+                        />
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button className="btn btn-primary btn-sm" onClick={async () => {
+                            if (!editNoticeValue.trim()) return;
+                            await api.patch(`/notices/${n.id}`, { content: editNoticeValue.trim() });
+                            setEditingNotice(null);
+                            loadNotices();
+                          }}>저장</button>
+                          <button className="btn btn-secondary btn-sm" onClick={() => setEditingNotice(null)}>취소</button>
+                        </div>
                       </div>
-                    </div>
-                    <button className="btn btn-danger btn-sm" style={{ flexShrink: 0 }} onClick={async () => {
-                      if (!window.confirm('이 소식을 삭제하시겠습니까?')) return;
-                      await api.delete(`/notices/${n.id}`);
-                      loadNotices();
-                    }}>삭제</button>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '0.9rem', lineHeight: 1.5, color: 'var(--text)' }}>{n.content}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                            {new Date(n.created_at).toLocaleString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                          <button className="btn btn-secondary btn-sm" onClick={() => { setEditingNotice(n.id); setEditNoticeValue(n.content); }}>수정</button>
+                          <button className="btn btn-danger btn-sm" onClick={async () => {
+                            if (!window.confirm('이 소식을 삭제하시겠습니까?')) return;
+                            await api.delete(`/notices/${n.id}`);
+                            loadNotices();
+                          }}>삭제</button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

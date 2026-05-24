@@ -161,6 +161,13 @@ const db = {
       .select().single();
     return data;
   },
+  async updateNotice(id, content) {
+    const { data } = await supabase.from('notices')
+      .update({ content })
+      .eq('id', parseInt(id))
+      .select().single();
+    return data;
+  },
   async deleteNotice(id) {
     await supabase.from('notices').delete().eq('id', parseInt(id));
   },
