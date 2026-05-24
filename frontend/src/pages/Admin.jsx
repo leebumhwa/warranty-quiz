@@ -125,7 +125,7 @@ export default function Admin() {
 
   const startEdit = (q) => {
     setEditingQuestion(q.id);
-    setEditForm({ correct_answer: q.correct_answer, explanation: q.explanation || '', options: [...q.options] });
+    setEditForm({ question_text: q.question_text, correct_answer: q.correct_answer, explanation: q.explanation || '', options: [...q.options] });
   };
 
   const handleSaveEdit = async (quizId) => {
@@ -305,32 +305,56 @@ export default function Admin() {
                             {idx+1}. {q.question_text}
                           </div>
                           {editingQuestion === q.id ? (
-                            <div style={{marginTop:'8px', display:'flex', flexDirection:'column', gap:'8px'}}>
+                            <div style={{marginTop:'8px', display:'flex', flexDirection:'column', gap:'10px'}}>
                               <div>
-                                <div style={{fontSize:'0.75rem', color:'var(--text-muted)', marginBottom:'4px'}}>정답 선택</div>
-                                <div style={{display:'flex', gap:'4px', flexWrap:'wrap'}}>
+                                <div style={{fontSize:'0.75rem', color:'var(--text-muted)', marginBottom:'4px'}}>문제 내용</div>
+                                <textarea
+                                  value={editForm.question_text}
+                                  onChange={e => setEditForm(f => ({...f, question_text: e.target.value}))}
+                                  rows={2}
+                                  style={{width:'100%', fontSize:'0.85rem', padding:'6px 8px', border:'1px solid var(--border)', borderRadius:'var(--radius)', resize:'vertical', boxSizing:'border-box'}}
+                                />
+                              </div>
+                              <div>
+                                <div style={{fontSize:'0.75rem', color:'var(--text-muted)', marginBottom:'4px'}}>선택지 수정 · 정답 클릭으로 선택</div>
+                                <div style={{display:'flex', flexDirection:'column', gap:'4px'}}>
                                   {editForm.options.map((opt, i) => (
-                                    <button key={i} type="button"
-                                      onClick={() => setEditForm(f => ({...f, correct_answer: i}))}
-                                      style={{
-                                        padding:'3px 10px', borderRadius:'999px', fontSize:'0.75rem', cursor:'pointer', border:'1.5px solid',
-                                        borderColor: editForm.correct_answer === i ? 'var(--success)' : 'var(--border)',
-                                        background: editForm.correct_answer === i ? 'var(--success-light)' : 'transparent',
-                                        color: editForm.correct_answer === i ? 'var(--success)' : 'var(--text-muted)',
-                                        fontWeight: editForm.correct_answer === i ? 700 : 400,
-                                      }}>
-                                      {String.fromCharCode(65+i)}. {opt}
-                                    </button>
+                                    <div key={i} style={{display:'flex', alignItems:'center', gap:'6px'}}>
+                                      <button type="button"
+                                        onClick={() => setEditForm(f => ({...f, correct_answer: i}))}
+                                        style={{
+                                          width:'24px', height:'24px', borderRadius:'50%', flexShrink:0, cursor:'pointer',
+                                          border: '2px solid', fontSize:'0.7rem', fontWeight:700,
+                                          borderColor: editForm.correct_answer === i ? 'var(--success)' : 'var(--border)',
+                                          background: editForm.correct_answer === i ? 'var(--success)' : 'transparent',
+                                          color: editForm.correct_answer === i ? '#fff' : 'var(--text-muted)',
+                                        }}>
+                                        {String.fromCharCode(65+i)}
+                                      </button>
+                                      <input
+                                        type="text"
+                                        value={opt}
+                                        onChange={e => setEditForm(f => {
+                                          const opts = [...f.options];
+                                          opts[i] = e.target.value;
+                                          return {...f, options: opts};
+                                        })}
+                                        style={{flex:1, fontSize:'0.82rem', padding:'4px 8px', border:'1px solid var(--border)', borderRadius:'var(--radius)',
+                                          borderColor: editForm.correct_answer === i ? 'var(--success)' : 'var(--border)',
+                                          background: editForm.correct_answer === i ? 'var(--success-light)' : 'transparent',
+                                        }}
+                                      />
+                                    </div>
                                   ))}
                                 </div>
                               </div>
                               <div>
-                                <div style={{fontSize:'0.75rem', color:'var(--text-muted)', marginBottom:'4px'}}>설명 수정</div>
+                                <div style={{fontSize:'0.75rem', color:'var(--text-muted)', marginBottom:'4px'}}>정답 설명</div>
                                 <textarea
                                   value={editForm.explanation}
                                   onChange={e => setEditForm(f => ({...f, explanation: e.target.value}))}
                                   rows={2}
-                                  style={{width:'100%', fontSize:'0.8rem', padding:'6px 8px', border:'1px solid var(--border)', borderRadius:'var(--radius)', resize:'vertical', boxSizing:'border-box'}}
+                                  style={{width:'100%', fontSize:'0.82rem', padding:'6px 8px', border:'1px solid var(--border)', borderRadius:'var(--radius)', resize:'vertical', boxSizing:'border-box'}}
                                 />
                               </div>
                               <div style={{display:'flex', gap:'6px'}}>

@@ -120,8 +120,9 @@ router.put('/questions/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     const q = await db.getQuestionById(req.params.id);
     if (!q) return res.status(404).json({ error: '문제를 찾을 수 없습니다.' });
-    const { correct_answer, explanation, options } = req.body;
+    const { question_text, correct_answer, explanation, options } = req.body;
     const updates = {};
+    if (question_text !== undefined) updates.question_text = question_text;
     if (correct_answer !== undefined) updates.correct_answer = parseInt(correct_answer);
     if (explanation !== undefined) updates.explanation = explanation;
     if (options !== undefined) updates.options = options;
