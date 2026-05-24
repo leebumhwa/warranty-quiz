@@ -29,7 +29,7 @@ async function callOpenRouter(prompt) {
     },
     body: JSON.stringify({
       model,
-      max_tokens: 2000,
+      max_tokens: 1500,
       messages: [{ role: 'user', content: prompt }],
     }),
   });
