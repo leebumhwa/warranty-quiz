@@ -6,7 +6,17 @@ const db = require('./db');
 
 const app = express();
 
-app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',')
+  : ['http://localhost:5173'];
+
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin || allowedOrigins.some(o => origin.startsWith(o))) return cb(null, true);
+    cb(null, true); // Vercel 동일 도메인 API 호출 허용
+  },
+  credentials: true,
+}));
 app.use(express.json());
 
 app.use('/api/auth', require('./routes/auth'));
@@ -27,8 +37,14 @@ async function seedAdmin() {
   }
 }
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`백엔드 서버 실행 중: http://localhost:${PORT}`);
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`백엔드 서버 실행 중: http://localhost:${PORT}`);
+    seedAdmin().catch(err => console.error('관리자 시딩 실패:', err.message));
+  });
+} else {
   seedAdmin().catch(err => console.error('관리자 시딩 실패:', err.message));
-});
+}
+
+module.exports = app;
