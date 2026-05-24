@@ -27,6 +27,7 @@ export default function Admin() {
   const [editForm, setEditForm] = useState({});
   const [editingFileNotes, setEditingFileNotes] = useState(null);
   const [fileNotesValue, setFileNotesValue] = useState('');
+  const [selectedResults, setSelectedResults] = useState(new Set());
 
   // File upload state
   const fileInputRef = useRef(null);
@@ -103,6 +104,76 @@ export default function Admin() {
     } finally {
       setGenerating(false);
     }
+  };
+
+  // --- Bulk result delete ---
+  const toggleResultSelect = (id) => {
+    setSelectedResults(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+  const toggleAllResults = () => {
+    if (selectedResults.size === allResults.length) {
+      setSelectedResults(new Set());
+    } else {
+      setSelectedResults(new Set(allResults.map(r => r.id)));
+    }
+  };
+  const handleBulkDelete = async () => {
+    if (selectedResults.size === 0) return;
+    if (!window.confirm(`선택한 ${selectedResults.size}개의 결과를 삭제하시겠습니까?`)) return;
+    await Promise.all([...selectedResults].map(id => api.delete(`/results/${id}`)));
+    setSelectedResults(new Set());
+    loadResults();
+  };
+
+  // --- Print quiz ---
+  const handlePrintQuiz = (quizId) => {
+    const quiz = quizzes.find(q => q.id === quizId);
+    const questions = quizQuestions[quizId] || [];
+    const win = window.open('', '_blank');
+    win.document.write(`<!DOCTYPE html><html lang="ko"><head>
+      <meta charset="UTF-8">
+      <title>${quiz?.title || '퀴즈'} — 인쇄</title>
+      <style>
+        body { font-family: 'Malgun Gothic', sans-serif; max-width: 740px; margin: 0 auto; padding: 32px 24px; color: #0f172a; }
+        h1 { font-size: 1.4rem; margin-bottom: 4px; }
+        .meta { font-size: 0.8rem; color: #64748b; margin-bottom: 24px; }
+        .question { margin-bottom: 28px; page-break-inside: avoid; }
+        .q-num { font-size: 0.75rem; color: #64748b; font-weight: 600; margin-bottom: 4px; }
+        .q-text { font-size: 1rem; font-weight: 600; margin-bottom: 10px; line-height: 1.5; }
+        .options { display: flex; flex-direction: column; gap: 6px; }
+        .option { display: flex; align-items: flex-start; gap: 8px; font-size: 0.9rem; padding: 6px 10px; border: 1px solid #e2e8f0; border-radius: 6px; }
+        .opt-label { font-weight: 700; min-width: 20px; }
+        .answer { margin-top: 8px; font-size: 0.8rem; color: #16a34a; font-weight: 600; }
+        .explanation { font-size: 0.8rem; color: #64748b; margin-top: 4px; }
+        hr { border: none; border-top: 1px solid #e2e8f0; margin: 20px 0; }
+        @media print { body { padding: 0; } }
+      </style>
+    </head><body>
+      <h1>${quiz?.title || '퀴즈'}</h1>
+      <div class="meta">${quiz?.description || ''} · 총 ${questions.length}문제 · 인쇄일: ${new Date().toLocaleDateString('ko-KR')}</div>
+      <hr>
+      ${questions.map((q, i) => `
+        <div class="question">
+          <div class="q-num">문제 ${i + 1}</div>
+          <div class="q-text">${q.question_text}</div>
+          <div class="options">
+            ${q.options.map((opt, oi) => `
+              <div class="option">
+                <span class="opt-label">${String.fromCharCode(65 + oi)}.</span>
+                <span>${opt}</span>
+              </div>`).join('')}
+          </div>
+          <div class="answer">정답: ${String.fromCharCode(65 + q.correct_answer)}. ${q.options[q.correct_answer]}</div>
+          ${q.explanation ? `<div class="explanation">해설: ${q.explanation}</div>` : ''}
+        </div>`).join('')}
+    </body></html>`);
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 300);
   };
 
   // --- Quiz management ---
@@ -295,6 +366,9 @@ export default function Admin() {
                   <button className="btn btn-secondary btn-sm" onClick={() => handleExpandQuiz(quiz.id)}>
                     {expandedQuiz === quiz.id ? '접기' : '문제 보기'}
                   </button>
+                  {expandedQuiz === quiz.id && quizQuestions[quiz.id]?.length > 0 && (
+                    <button className="btn btn-secondary btn-sm" onClick={() => handlePrintQuiz(quiz.id)}>🖨️ 인쇄</button>
+                  )}
                   <button className="btn btn-danger btn-sm" onClick={() => handleDeleteQuiz(quiz.id, quiz.title)}>삭제</button>
                 </div>
               </div>
@@ -403,8 +477,13 @@ export default function Admin() {
       {/* Results tab */}
       {tab === 'results' && (
         <div className="card" style={{padding:0, overflow:'hidden'}}>
-          <div style={{padding:'16px 24px', borderBottom:'1px solid var(--border)'}}>
+          <div style={{padding:'16px 24px', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'12px'}}>
             <div className="card-title" style={{margin:0}}>전체 사용자 결과 ({allResults.length}건)</div>
+            {selectedResults.size > 0 && (
+              <button className="btn btn-danger btn-sm" onClick={handleBulkDelete}>
+                선택 삭제 ({selectedResults.size}개)
+              </button>
+            )}
           </div>
           {allResults.length === 0 ? (
             <div className="empty-state">아직 제출된 결과가 없습니다.</div>
@@ -413,6 +492,13 @@ export default function Admin() {
               <table>
                 <thead>
                   <tr>
+                    <th style={{width:'36px', textAlign:'center'}}>
+                      <input type="checkbox"
+                        checked={allResults.length > 0 && selectedResults.size === allResults.length}
+                        onChange={toggleAllResults}
+                        style={{cursor:'pointer'}}
+                      />
+                    </th>
                     <th>사용자</th>
                     <th>이메일</th>
                     <th>퀴즈</th>
@@ -426,8 +512,12 @@ export default function Admin() {
                   {allResults.map(r => {
                     const pct = Math.round((r.score / r.total) * 100);
                     const passed = pct >= 60;
+                    const checked = selectedResults.has(r.id);
                     return (
-                      <tr key={r.id}>
+                      <tr key={r.id} style={{background: checked ? 'var(--primary-light)' : ''}}>
+                        <td style={{textAlign:'center'}}>
+                          <input type="checkbox" checked={checked} onChange={() => toggleResultSelect(r.id)} style={{cursor:'pointer'}} />
+                        </td>
                         <td style={{fontWeight:500}}>{r.user_name}</td>
                         <td className="text-muted text-sm">{r.user_email}</td>
                         <td>{r.quiz_title}</td>
@@ -446,6 +536,7 @@ export default function Admin() {
                           <button className="btn btn-danger btn-sm" onClick={async () => {
                             if (!window.confirm(`${r.user_name}의 결과를 삭제하시겠습니까?`)) return;
                             await api.delete(`/results/${r.id}`);
+                            setSelectedResults(prev => { const n = new Set(prev); n.delete(r.id); return n; });
                             loadResults();
                           }}>삭제</button>
                         </td>
