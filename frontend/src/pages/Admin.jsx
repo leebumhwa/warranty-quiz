@@ -389,6 +389,7 @@ export default function Admin() {
                     <th>점수</th>
                     <th>정답률</th>
                     <th>완료 일시</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -411,6 +412,13 @@ export default function Admin() {
                           </span>
                         </td>
                         <td className="text-muted text-sm">{formatDate(r.completed_at)}</td>
+                        <td>
+                          <button className="btn btn-danger btn-sm" onClick={async () => {
+                            if (!window.confirm(`${r.user_name}의 결과를 삭제하시겠습니까?`)) return;
+                            await api.delete(`/results/${r.id}`);
+                            loadResults();
+                          }}>삭제</button>
+                        </td>
                       </tr>
                     );
                   })}

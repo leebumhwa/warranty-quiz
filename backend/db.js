@@ -184,6 +184,10 @@ const db = {
   },
 
   // Results
+  async deleteResult(id) {
+    const { error } = await supabase.from('results').delete().eq('id', parseInt(id));
+    return !error;
+  },
   async createResult(userId, quizId, score, total, answers) {
     const { data } = await supabase
       .from('results')
