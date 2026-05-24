@@ -262,24 +262,79 @@ tr:hover td { background: var(--bg); }
 .font-bold { font-weight: 700; }
 .empty-state { text-align: center; padding: 48px; color: var(--text-muted); }
 
-/* Dashboard widgets */
-.widget-row {
+/* Dashboard layout */
+.dashboard-layout {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-bottom: 28px;
+  grid-template-columns: 1fr 272px;
+  gap: 24px;
+  align-items: start;
 }
-@media (max-width: 720px) {
-  .widget-row { grid-template-columns: 1fr; }
+.dashboard-main { min-width: 0; }
+.dashboard-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: sticky;
+  top: 80px;
 }
+@media (max-width: 900px) {
+  .dashboard-layout { grid-template-columns: 1fr; }
+  .dashboard-sidebar {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    position: static;
+  }
+}
+@media (max-width: 600px) {
+  .dashboard-sidebar { grid-template-columns: 1fr; }
+}
+
+/* Widget cards */
 .widget-card {
   background: var(--card); border: 1px solid var(--border);
   border-radius: var(--radius); box-shadow: var(--shadow);
-  padding: 16px 20px;
+  padding: 14px 16px;
 }
 .widget-label {
-  font-size: 0.72rem; font-weight: 600; text-transform: uppercase;
-  letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 6px;
+  font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 2px;
+}
+
+/* Quiz card v2 */
+.quiz-grid-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.quiz-card-v2 {
+  display: flex;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+  overflow: hidden; transition: box-shadow 0.15s, transform 0.15s;
+}
+.quiz-card-v2:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+.quiz-card-v2-accent {
+  width: 4px;
+  flex-shrink: 0;
+}
+.quiz-card-v2-body {
+  flex: 1;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.quiz-card-v2-title {
+  font-size: 1rem; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.quiz-card-v2-badge {
+  padding: 2px 10px; border-radius: 999px;
+  font-size: 0.72rem; font-weight: 700;
+  white-space: nowrap; flex-shrink: 0;
 }
 
 /* Calendar */
