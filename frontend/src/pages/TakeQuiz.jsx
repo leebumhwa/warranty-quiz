@@ -13,6 +13,9 @@ export default function TakeQuiz() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [reportingId, setReportingId] = useState(null);
+  const [reportComment, setReportComment] = useState('');
+  const [reportStatus, setReportStatus] = useState({});
 
   useEffect(() => {
     api.get(`/quizzes/${id}`)
@@ -58,6 +61,18 @@ export default function TakeQuiz() {
       setError('결과 저장에 실패했습니다.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleReport = async (questionId) => {
+    if (!reportComment.trim()) return;
+    try {
+      await api.post(`/quizzes/questions/${questionId}/report`, { comment: reportComment });
+      setReportStatus(prev => ({ ...prev, [questionId]: '신고가 접수되었습니다.' }));
+      setReportingId(null);
+      setReportComment('');
+    } catch {
+      setReportStatus(prev => ({ ...prev, [questionId]: '신고 접수에 실패했습니다.' }));
     }
   };
 
@@ -132,6 +147,33 @@ export default function TakeQuiz() {
                 </div>
                 {q.explanation && (
                   <div style={{color: 'var(--text)', fontSize: '0.875rem'}}>{q.explanation}</div>
+                )}
+              </div>
+            )}
+            {submitted && (
+              <div style={{marginTop: '8px'}}>
+                {reportStatus[q.id] ? (
+                  <span style={{fontSize:'0.75rem', color:'var(--text-muted)'}}>{reportStatus[q.id]}</span>
+                ) : reportingId === q.id ? (
+                  <div style={{display:'flex', gap:'6px', alignItems:'center', marginTop:'4px'}}>
+                    <input
+                      type="text"
+                      placeholder="오류 내용을 입력해주세요 (예: 정답이 B가 맞습니다)"
+                      value={reportComment}
+                      onChange={e => setReportComment(e.target.value)}
+                      style={{flex:1, fontSize:'0.8rem', padding:'4px 8px', border:'1px solid var(--border)', borderRadius:'var(--radius)'}}
+                    />
+                    <button className="btn btn-primary btn-sm" onClick={() => handleReport(q.id)}>접수</button>
+                    <button className="btn btn-secondary btn-sm" onClick={() => { setReportingId(null); setReportComment(''); }}>취소</button>
+                  </div>
+                ) : (
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    style={{fontSize:'0.72rem', padding:'2px 8px'}}
+                    onClick={() => { setReportingId(q.id); setReportComment(''); }}
+                  >
+                    오류 신고
+                  </button>
                 )}
               </div>
             )}

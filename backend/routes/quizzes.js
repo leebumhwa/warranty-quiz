@@ -66,7 +66,12 @@ router.post('/generate', authenticate, requireAdmin, async (req, res) => {
   let content = files.map(f => `=== ${f.original_name} ===\n${f.content}`).join('\n\n');
   if (content.length > MAX_CONTENT) content = content.substring(0, MAX_CONTENT) + '\n...(이하 생략)';
 
-  const prompt = `다음 문서 내용을 바탕으로 정확히 ${count}개의 4지선다 퀴즈 문제를 만들어주세요.
+  const correctionNotes = files
+    .filter(f => f.correction_notes?.trim())
+    .map(f => `[${f.original_name}] ${f.correction_notes}`)
+    .join('\n');
+
+  const prompt = `다음 문서 내용을 바탕으로 정확히 ${count}개의 4지선다 퀴즈 문제를 만들어주세요.${correctionNotes ? `\n\n⚠️ 이전에 발견된 오류 참고사항 (반드시 반영):\n${correctionNotes}` : ''}
 
 반드시 아래 JSON 배열 형식만 반환하세요. 다른 텍스트는 절대 포함하지 마세요:
 [
@@ -107,6 +112,56 @@ ${content}`;
   } catch (err) {
     console.error('Quiz generation error:', err);
     res.status(500).json({ error: `퀴즈 생성 실패: ${err.message}` });
+  }
+});
+
+// PUT /quizzes/questions/:id - admin edit question
+router.put('/questions/:id', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const q = await db.getQuestionById(req.params.id);
+    if (!q) return res.status(404).json({ error: '문제를 찾을 수 없습니다.' });
+    const { correct_answer, explanation, options } = req.body;
+    const updates = {};
+    if (correct_answer !== undefined) updates.correct_answer = parseInt(correct_answer);
+    if (explanation !== undefined) updates.explanation = explanation;
+    if (options !== undefined) updates.options = options;
+    const updated = await db.updateQuestion(req.params.id, updates);
+    res.json({ question: updated });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /quizzes/questions/:id/report - user report
+router.post('/questions/:id/report', authenticate, async (req, res) => {
+  try {
+    const q = await db.getQuestionById(req.params.id);
+    if (!q) return res.status(404).json({ error: '문제를 찾을 수 없습니다.' });
+    const { comment } = req.body;
+    if (!comment?.trim()) return res.status(400).json({ error: '신고 내용을 입력해주세요.' });
+    const report = await db.createReport(q.id, q.quiz_id, req.user.id, q.question_text, comment);
+    res.json({ report });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /quizzes/reports - admin view all reports
+router.get('/reports', authenticate, requireAdmin, async (req, res) => {
+  try {
+    res.json({ reports: await db.getAllReports() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /quizzes/reports/:id/resolve - admin resolve report
+router.patch('/reports/:id/resolve', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const report = await db.resolveReport(req.params.id);
+    res.json({ report });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

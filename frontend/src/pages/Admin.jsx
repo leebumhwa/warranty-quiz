@@ -15,8 +15,13 @@ export default function Admin() {
   const [files, setFiles] = useState([]);
   const [quizzes, setQuizzes] = useState([]);
   const [allResults, setAllResults] = useState([]);
+  const [reports, setReports] = useState([]);
   const [expandedQuiz, setExpandedQuiz] = useState(null);
   const [quizQuestions, setQuizQuestions] = useState({});
+  const [editingQuestion, setEditingQuestion] = useState(null);
+  const [editForm, setEditForm] = useState({});
+  const [editingFileNotes, setEditingFileNotes] = useState(null);
+  const [fileNotesValue, setFileNotesValue] = useState('');
 
   // File upload state
   const fileInputRef = useRef(null);
@@ -35,8 +40,9 @@ export default function Admin() {
   const loadFiles = () => api.get('/files').then(r => setFiles(r.data.files)).catch(() => {});
   const loadQuizzes = () => api.get('/quizzes').then(r => setQuizzes(r.data.quizzes)).catch(() => {});
   const loadResults = () => api.get('/results/all').then(r => setAllResults(r.data.results)).catch(() => {});
+  const loadReports = () => api.get('/quizzes/reports').then(r => setReports(r.data.reports)).catch(() => {});
 
-  useEffect(() => { loadFiles(); loadQuizzes(); loadResults(); }, []);
+  useEffect(() => { loadFiles(); loadQuizzes(); loadResults(); loadReports(); }, []);
 
   // --- File management ---
   const handleUpload = async (e) => {
@@ -117,11 +123,34 @@ export default function Admin() {
     }
   };
 
+  const startEdit = (q) => {
+    setEditingQuestion(q.id);
+    setEditForm({ correct_answer: q.correct_answer, explanation: q.explanation || '', options: [...q.options] });
+  };
+
+  const handleSaveEdit = async (quizId) => {
+    await api.put(`/quizzes/questions/${editingQuestion}`, editForm);
+    setEditingQuestion(null);
+    const res = await api.get(`/quizzes/${quizId}`);
+    setQuizQuestions(prev => ({ ...prev, [quizId]: res.data.questions.map(q => ({...q, options: JSON.parse(q.options)})) }));
+  };
+
+  const handleResolveReport = async (reportId) => {
+    await api.patch(`/quizzes/reports/${reportId}/resolve`);
+    loadReports();
+  };
+
+  const handleSaveFileNotes = async (fileId) => {
+    await api.patch(`/files/${fileId}/notes`, { notes: fileNotesValue });
+    setEditingFileNotes(null);
+    loadFiles();
+  };
+
   return (
     <div className="page">
       <h1 className="page-title">관리자 패널</h1>
       <div className="tabs">
-        {[['files','파일 관리'],['generate','퀴즈 생성'],['quizzes','퀴즈 관리'],['results','사용자 결과']].map(([key,label]) => (
+        {[['files','파일 관리'],['generate','퀴즈 생성'],['quizzes','퀴즈 관리'],['results','사용자 결과'],['reports',`신고 관리${reports.filter(r=>!r.resolved).length > 0 ? ` (${reports.filter(r=>!r.resolved).length})` : ''}`]].map(([key,label]) => (
           <button key={key} className={`tab-btn ${tab===key?'active':''}`} onClick={() => setTab(key)}>{label}</button>
         ))}
       </div>
@@ -152,12 +181,37 @@ export default function Admin() {
             ) : (
               <div className="file-list">
                 {files.map(f => (
-                  <div key={f.id} className="file-item">
-                    <div>
-                      <div className="file-name">{f.original_name}</div>
-                      <div className="file-meta">{formatSize(f.file_size)} · {f.uploader_name} · {formatDate(f.created_at)}</div>
+                  <div key={f.id} className="file-item" style={{flexDirection:'column', alignItems:'stretch', gap:'8px'}}>
+                    <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                      <div>
+                        <div className="file-name">{f.original_name}</div>
+                        <div className="file-meta">{formatSize(f.file_size)} · {f.uploader_name} · {formatDate(f.created_at)}</div>
+                      </div>
+                      <div style={{display:'flex', gap:'6px'}}>
+                        <button className="btn btn-secondary btn-sm" onClick={() => { setEditingFileNotes(f.id); setFileNotesValue(f.correction_notes || ''); }}>수정 메모</button>
+                        <button className="btn btn-danger btn-sm" onClick={() => handleDeleteFile(f.id, f.original_name)}>삭제</button>
+                      </div>
                     </div>
-                    <button className="btn btn-danger btn-sm" onClick={() => handleDeleteFile(f.id, f.original_name)}>삭제</button>
+                    {editingFileNotes === f.id && (
+                      <div style={{display:'flex', gap:'6px', alignItems:'flex-start'}}>
+                        <textarea
+                          value={fileNotesValue}
+                          onChange={e => setFileNotesValue(e.target.value)}
+                          placeholder="이 파일로 퀴즈 생성 시 반영할 수정 메모 (예: '3번 조항의 기간은 2년이 아니라 3년입니다')"
+                          rows={2}
+                          style={{flex:1, fontSize:'0.8rem', padding:'6px 8px', border:'1px solid var(--border)', borderRadius:'var(--radius)', resize:'vertical'}}
+                        />
+                        <div style={{display:'flex', flexDirection:'column', gap:'4px'}}>
+                          <button className="btn btn-primary btn-sm" onClick={() => handleSaveFileNotes(f.id)}>저장</button>
+                          <button className="btn btn-secondary btn-sm" onClick={() => setEditingFileNotes(null)}>취소</button>
+                        </div>
+                      </div>
+                    )}
+                    {f.correction_notes && editingFileNotes !== f.id && (
+                      <div style={{fontSize:'0.75rem', color:'var(--text-muted)', background:'var(--bg)', padding:'4px 8px', borderRadius:'var(--radius)', borderLeft:'2px solid var(--warning, #f59e0b)'}}>
+                        메모: {f.correction_notes}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -250,21 +304,62 @@ export default function Admin() {
                           <div style={{fontWeight:500, fontSize:'0.9rem', marginBottom:'6px'}}>
                             {idx+1}. {q.question_text}
                           </div>
-                          <div style={{display:'flex', flexWrap:'wrap', gap:'4px'}}>
-                            {q.options.map((opt, i) => (
-                              <span key={i} style={{
-                                padding:'2px 8px', borderRadius:'999px', fontSize:'0.75rem',
-                                background: i === q.correct_answer ? 'var(--success-light)' : 'var(--border)',
-                                color: i === q.correct_answer ? 'var(--success)' : 'var(--text-muted)',
-                                fontWeight: i === q.correct_answer ? 600 : 400,
-                              }}>
-                                {String.fromCharCode(65+i)}. {opt}
-                              </span>
-                            ))}
-                          </div>
+                          {editingQuestion === q.id ? (
+                            <div style={{marginTop:'8px', display:'flex', flexDirection:'column', gap:'8px'}}>
+                              <div>
+                                <div style={{fontSize:'0.75rem', color:'var(--text-muted)', marginBottom:'4px'}}>정답 선택</div>
+                                <div style={{display:'flex', gap:'4px', flexWrap:'wrap'}}>
+                                  {editForm.options.map((opt, i) => (
+                                    <button key={i} type="button"
+                                      onClick={() => setEditForm(f => ({...f, correct_answer: i}))}
+                                      style={{
+                                        padding:'3px 10px', borderRadius:'999px', fontSize:'0.75rem', cursor:'pointer', border:'1.5px solid',
+                                        borderColor: editForm.correct_answer === i ? 'var(--success)' : 'var(--border)',
+                                        background: editForm.correct_answer === i ? 'var(--success-light)' : 'transparent',
+                                        color: editForm.correct_answer === i ? 'var(--success)' : 'var(--text-muted)',
+                                        fontWeight: editForm.correct_answer === i ? 700 : 400,
+                                      }}>
+                                      {String.fromCharCode(65+i)}. {opt}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                              <div>
+                                <div style={{fontSize:'0.75rem', color:'var(--text-muted)', marginBottom:'4px'}}>설명 수정</div>
+                                <textarea
+                                  value={editForm.explanation}
+                                  onChange={e => setEditForm(f => ({...f, explanation: e.target.value}))}
+                                  rows={2}
+                                  style={{width:'100%', fontSize:'0.8rem', padding:'6px 8px', border:'1px solid var(--border)', borderRadius:'var(--radius)', resize:'vertical', boxSizing:'border-box'}}
+                                />
+                              </div>
+                              <div style={{display:'flex', gap:'6px'}}>
+                                <button className="btn btn-primary btn-sm" onClick={() => handleSaveEdit(quiz.id)}>저장</button>
+                                <button className="btn btn-secondary btn-sm" onClick={() => setEditingQuestion(null)}>취소</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div style={{display:'flex', flexWrap:'wrap', gap:'4px'}}>
+                              {q.options.map((opt, i) => (
+                                <span key={i} style={{
+                                  padding:'2px 8px', borderRadius:'999px', fontSize:'0.75rem',
+                                  background: i === q.correct_answer ? 'var(--success-light)' : 'var(--border)',
+                                  color: i === q.correct_answer ? 'var(--success)' : 'var(--text-muted)',
+                                  fontWeight: i === q.correct_answer ? 600 : 400,
+                                }}>
+                                  {String.fromCharCode(65+i)}. {opt}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                        <button className="btn btn-danger btn-sm" style={{marginLeft:'8px'}}
-                          onClick={() => handleDeleteQuestion(q.id, quiz.id)}>삭제</button>
+                        <div style={{display:'flex', gap:'4px', marginLeft:'8px', flexShrink:0}}>
+                          {editingQuestion !== q.id && (
+                            <button className="btn btn-secondary btn-sm" onClick={() => startEdit(q)}>수정</button>
+                          )}
+                          <button className="btn btn-danger btn-sm"
+                            onClick={() => handleDeleteQuestion(q.id, quiz.id)}>삭제</button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -323,6 +418,45 @@ export default function Admin() {
               </table>
             </div>
           )}
+        </div>
+      )}
+      {/* Reports tab */}
+      {tab === 'reports' && (
+        <div>
+          <div className="card-title mb-4">오류 신고 목록 ({reports.length}건 · 미해결 {reports.filter(r=>!r.resolved).length}건)</div>
+          {reports.length === 0 ? (
+            <div className="empty-state">신고된 문제가 없습니다.</div>
+          ) : reports.map(r => (
+            <div key={r.id} className="card mb-3" style={{opacity: r.resolved ? 0.6 : 1}}>
+              <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:'12px'}}>
+                <div style={{flex:1}}>
+                  <div style={{display:'flex', alignItems:'center', gap:'8px', marginBottom:'6px'}}>
+                    <span style={{
+                      fontSize:'0.7rem', fontWeight:700, padding:'1px 7px', borderRadius:'999px',
+                      background: r.resolved ? 'var(--border)' : 'var(--error-light)',
+                      color: r.resolved ? 'var(--text-muted)' : 'var(--error)',
+                    }}>{r.resolved ? '해결됨' : '미해결'}</span>
+                    <span className="text-sm text-muted">{r.user_name} · {formatDate(r.created_at)}</span>
+                  </div>
+                  <div style={{fontSize:'0.85rem', fontWeight:600, marginBottom:'4px', color:'var(--text)'}}>
+                    문제: {r.question_text}
+                  </div>
+                  <div style={{fontSize:'0.85rem', color:'var(--text)', background:'var(--bg)', padding:'8px 10px', borderRadius:'var(--radius)', borderLeft:'3px solid var(--error)'}}>
+                    신고 내용: {r.user_comment}
+                  </div>
+                </div>
+                {!r.resolved && (
+                  <div style={{display:'flex', flexDirection:'column', gap:'4px', flexShrink:0}}>
+                    <button className="btn btn-secondary btn-sm"
+                      onClick={() => { setTab('quizzes'); setExpandedQuiz(r.quiz_id); handleExpandQuiz(r.quiz_id); }}>
+                      문제 수정
+                    </button>
+                    <button className="btn btn-success btn-sm" onClick={() => handleResolveReport(r.id)}>해결됨</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

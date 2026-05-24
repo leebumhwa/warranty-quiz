@@ -141,6 +141,48 @@ const db = {
     return !error;
   },
 
+  // Questions
+  async updateQuestion(id, updates) {
+    const { data } = await supabase.from(QUIZ_ITEM)
+      .update(updates).eq('id', parseInt(id)).select().single();
+    return data;
+  },
+
+  // Reports
+  async createReport(questionId, quizId, userId, questionText, comment) {
+    const { data } = await supabase.from('question_reports')
+      .insert({ question_id: questionId, quiz_id: quizId, user_id: userId, question_text: questionText, user_comment: comment })
+      .select().single();
+    return data;
+  },
+  async getAllReports() {
+    const { data: reports } = await supabase.from('question_reports')
+      .select('*').order('created_at', { ascending: false });
+    if (!reports || reports.length === 0) return [];
+
+    const userIds = [...new Set(reports.map(r => r.user_id).filter(Boolean))];
+    const { data: users } = await supabase.from('users').select('id, name, email').in('id', userIds);
+    const userMap = Object.fromEntries((users || []).map(u => [u.id, u]));
+
+    return reports.map(r => ({
+      ...r,
+      user_name: userMap[r.user_id]?.name || '알 수 없음',
+      user_email: userMap[r.user_id]?.email || '',
+    }));
+  },
+  async resolveReport(reportId) {
+    const { data } = await supabase.from('question_reports')
+      .update({ resolved: true }).eq('id', parseInt(reportId)).select().single();
+    return data;
+  },
+
+  // File correction notes
+  async updateFileCorrectionNotes(fileId, notes) {
+    const { data } = await supabase.from('files')
+      .update({ correction_notes: notes }).eq('id', parseInt(fileId)).select().single();
+    return data;
+  },
+
   // Results
   async createResult(userId, quizId, score, total, answers) {
     const { data } = await supabase

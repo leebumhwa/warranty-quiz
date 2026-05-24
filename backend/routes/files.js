@@ -48,6 +48,16 @@ router.post('/upload', authenticate, requireAdmin, upload.array('files', 20), as
   res.json({ uploaded, errors });
 });
 
+router.patch('/:id/notes', authenticate, requireAdmin, async (req, res) => {
+  try {
+    if (!await db.getFileById(req.params.id)) return res.status(404).json({ error: '파일을 찾을 수 없습니다.' });
+    const updated = await db.updateFileCorrectionNotes(req.params.id, req.body.notes || '');
+    res.json({ file: updated });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     if (!await db.getFileById(req.params.id)) return res.status(404).json({ error: '파일을 찾을 수 없습니다.' });
