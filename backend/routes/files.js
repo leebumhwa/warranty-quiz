@@ -8,8 +8,8 @@ const { authenticate, requireAdmin } = require('../middleware/auth');
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 
-async function extractText(file) {
-  const ext = file.originalname.toLowerCase().split('.').pop();
+async function extractText(file, name) {
+  const ext = name.toLowerCase().split('.').pop();
   if (ext === 'pdf') {
     const data = await pdfParse(file.buffer);
     return data.text;
@@ -35,13 +35,14 @@ router.post('/upload', authenticate, requireAdmin, upload.array('files', 20), as
   }
   const uploaded = [], errors = [];
   for (const file of req.files) {
+    const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
     try {
-      const content = await extractText(file);
-      if (!content.trim()) { errors.push(`${file.originalname}: 텍스트를 추출할 수 없습니다.`); continue; }
-      const saved = await db.createFile(file.originalname, content, file.size, req.user.id);
+      const content = await extractText(file, originalName);
+      if (!content.trim()) { errors.push(`${originalName}: 텍스트를 추출할 수 없습니다.`); continue; }
+      const saved = await db.createFile(originalName, content, file.size, req.user.id);
       uploaded.push({ id: saved.id, original_name: saved.original_name, file_size: saved.file_size });
     } catch (err) {
-      errors.push(`${file.originalname}: ${err.message}`);
+      errors.push(`${originalName}: ${err.message}`);
     }
   }
   res.json({ uploaded, errors });

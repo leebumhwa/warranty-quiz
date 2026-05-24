@@ -119,9 +119,20 @@ export default function TakeQuiz() {
                 );
               })}
             </div>
-            {submitted && q.explanation && (
-              <div className="result-explanation">
-                <strong>설명:</strong> {q.explanation}
+            {submitted && !isCorrect && (
+              <div className="result-explanation" style={{
+                borderLeft: '3px solid var(--error)',
+                background: 'var(--error-light)',
+                padding: '12px 16px',
+                borderRadius: '0 var(--radius) var(--radius) 0',
+                marginTop: '12px'
+              }}>
+                <div style={{fontWeight: 600, color: 'var(--error)', marginBottom: '4px', fontSize: '0.85rem'}}>
+                  오답 — 정답: {String.fromCharCode(65 + q.correct_answer)}. {q.options[q.correct_answer]}
+                </div>
+                {q.explanation && (
+                  <div style={{color: 'var(--text)', fontSize: '0.875rem'}}>{q.explanation}</div>
+                )}
               </div>
             )}
           </div>
