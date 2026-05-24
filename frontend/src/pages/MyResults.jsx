@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
+import { useAuth } from '../contexts/AuthContext';
 
 function formatDate(dateStr) {
   return new Date(dateStr).toLocaleString('ko-KR', {
@@ -10,14 +11,20 @@ function formatDate(dateStr) {
 }
 
 export default function MyResults() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    api.get('/results/me')
-      .then(res => setResults(res.data.results))
-      .finally(() => setLoading(false));
-  }, []);
+  const loadResults = () => api.get('/results/me').then(res => setResults(res.data.results)).finally(() => setLoading(false));
+
+  useEffect(() => { loadResults(); }, []);
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('이 기록을 삭제하시겠습니까?')) return;
+    await api.delete(`/results/${id}`);
+    loadResults();
+  };
 
   if (loading) return <div className="loading-screen">기록 로딩 중...</div>;
 
@@ -72,7 +79,12 @@ export default function MyResults() {
                       </td>
                       <td className="text-muted text-sm">{formatDate(r.completed_at)}</td>
                       <td>
-                        <Link to={`/quiz/${r.quiz_id}`} className="btn btn-secondary btn-sm">다시 풀기</Link>
+                        <div style={{display:'flex', gap:'6px'}}>
+                          <Link to={`/quiz/${r.quiz_id}`} className="btn btn-secondary btn-sm">다시 풀기</Link>
+                          {isAdmin && (
+                            <button className="btn btn-danger btn-sm" onClick={() => handleDelete(r.id)}>삭제</button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
