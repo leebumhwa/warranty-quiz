@@ -1,5 +1,42 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../api';
+
+const MEDAL = ['🥇', '🥈', '🥉'];
+
+export function LeaderboardWidget() {
+  const [data, setData] = useState([]);
+
+  useEffect(() => {
+    api.get('/results/leaderboard').then(r => setData(r.data.leaderboard.slice(0, 5))).catch(() => {});
+  }, []);
+
+  return (
+    <div className="widget-card">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+        <div className="widget-label">🏆 랭킹</div>
+        <Link to="/leaderboard" style={{ fontSize: '0.7rem', color: 'var(--primary)', textDecoration: 'none' }}>전체 보기 →</Link>
+      </div>
+      {data.length === 0 ? (
+        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textAlign: 'center', padding: '8px 0' }}>아직 데이터가 없습니다.</div>
+      ) : (
+        <ol style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {data.map(r => (
+            <li key={r.user_id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: r.rank <= 3 ? '1rem' : '0.75rem', minWidth: '22px', textAlign: 'center', fontWeight: 700, color: 'var(--text-muted)' }}>
+                {r.rank <= 3 ? MEDAL[r.rank - 1] : `${r.rank}`}
+              </span>
+              <span style={{ flex: 1, fontSize: '0.82rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.user_name}</span>
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: r.avg_accuracy >= 80 ? 'var(--success)' : r.avg_accuracy >= 60 ? 'var(--warning)' : 'var(--error)', flexShrink: 0 }}>
+                {r.avg_accuracy}%
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+}
 
 const WMO = {
   0: ['맑음', '☀️'], 1: ['대체로 맑음', '🌤️'], 2: ['구름 조금', '⛅'], 3: ['흐림', '☁️'],

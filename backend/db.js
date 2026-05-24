@@ -241,6 +241,38 @@ const db = {
 
     return results.map(r => ({ ...r, quiz_title: quizMap[r.quiz_id] || '삭제된 퀴즈' }));
   },
+  async getLeaderboard() {
+    const { data: results } = await supabase
+      .from('results')
+      .select('user_id, score, total');
+    if (!results || results.length === 0) return [];
+
+    const userStats = {};
+    for (const r of results) {
+      if (!userStats[r.user_id]) userStats[r.user_id] = { total_score: 0, total_questions: 0, count: 0 };
+      userStats[r.user_id].total_score += r.score;
+      userStats[r.user_id].total_questions += r.total;
+      userStats[r.user_id].count += 1;
+    }
+
+    const userIds = Object.keys(userStats).map(Number);
+    const { data: users } = await supabase.from('users').select('id, name').in('id', userIds);
+    const userMap = Object.fromEntries((users || []).map(u => [u.id, u.name]));
+
+    const rankings = userIds.map(id => ({
+      user_id: id,
+      user_name: userMap[id] || '알 수 없음',
+      quiz_count: userStats[id].count,
+      avg_accuracy: userStats[id].total_questions > 0
+        ? Math.round((userStats[id].total_score / userStats[id].total_questions) * 100)
+        : 0,
+      total_score: userStats[id].total_score,
+      total_questions: userStats[id].total_questions,
+    }));
+
+    rankings.sort((a, b) => b.avg_accuracy - a.avg_accuracy || b.quiz_count - a.quiz_count);
+    return rankings.map((r, idx) => ({ ...r, rank: idx + 1 }));
+  },
   async getAllResults() {
     const { data: results } = await supabase
       .from('results')

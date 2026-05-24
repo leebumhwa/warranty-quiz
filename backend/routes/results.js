@@ -35,6 +35,14 @@ router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
   }
 });
 
+router.get('/leaderboard', authenticate, async (req, res) => {
+  try {
+    res.json({ leaderboard: await db.getLeaderboard() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/all', authenticate, requireAdmin, async (req, res) => {
   try {
     res.json({ results: await db.getAllResults() });

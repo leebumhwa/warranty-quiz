@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import TakeQuiz from './pages/TakeQuiz';
 import MyResults from './pages/MyResults';
 import Admin from './pages/Admin';
+import Leaderboard from './pages/Leaderboard';
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
@@ -36,6 +37,7 @@ function AppRoutes() {
           <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           <Route path="/quiz/:id" element={<PrivateRoute><TakeQuiz /></PrivateRoute>} />
           <Route path="/results" element={<PrivateRoute><MyResults /></PrivateRoute>} />
+          <Route path="/leaderboard" element={<PrivateRoute><Leaderboard /></PrivateRoute>} />
           <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

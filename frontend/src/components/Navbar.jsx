@@ -39,6 +39,7 @@ export default function Navbar() {
         {themeBtn}
         <Link to="/dashboard" className={isActive('/dashboard')}>퀴즈 목록</Link>
         <Link to="/results" className={isActive('/results')}>내 기록</Link>
+        <Link to="/leaderboard" className={isActive('/leaderboard')}>랭킹</Link>
         {user.role === 'admin' && (
           <Link to="/admin" className={isActive('/admin')}>관리자</Link>
         )}

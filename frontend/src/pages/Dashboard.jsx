@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
-import { ClockWidget, CalendarWidget, WeatherWidget, NoticesWidget } from '../components/DashboardWidgets';
+import { ClockWidget, CalendarWidget, WeatherWidget, NoticesWidget, LeaderboardWidget } from '../components/DashboardWidgets';
 
 function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -108,6 +108,7 @@ export default function Dashboard() {
         <aside className="dashboard-sidebar">
           <ClockWidget />
           <WeatherWidget />
+          <LeaderboardWidget />
           <NoticesWidget />
           <CalendarWidget />
         </aside>
