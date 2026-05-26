@@ -8,3 +8,7 @@ backend/warranty_quiz.json
 dist/
 
 .vercel
+.claude/
+.playwright-mcp/
+*.png
+test_warranty.txt
