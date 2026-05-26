@@ -345,10 +345,11 @@ tr:hover td { background: var(--bg); }
 }
 .cal-nav:hover { background: var(--bg); color: var(--text); }
 .cal-grid {
-  display: grid; grid-template-columns: repeat(7, 1fr);
+  display: grid; grid-template-columns: 22px repeat(7, 1fr);
   gap: 2px; text-align: center;
 }
 .cal-head { font-size: 0.68rem; font-weight: 600; padding: 3px 0; color: var(--text-muted); }
+.cal-week { font-size: 0.6rem; font-weight: 700; padding: 4px 0; color: var(--primary); opacity: 0.55; text-align: center; line-height: 1.6; }
 .cal-cell {
   font-size: 0.75rem; padding: 4px 2px; border-radius: 4px;
   cursor: default; color: var(--text);

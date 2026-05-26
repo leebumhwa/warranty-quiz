@@ -6,3 +6,5 @@ backend/warranty_quiz.json
 .env
 *.log
 dist/
+
+.vercel

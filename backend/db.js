@@ -206,12 +206,43 @@ const db = {
       .update({ resolved: true }).eq('id', parseInt(reportId)).select().single();
     return data;
   },
+  async deleteReport(reportId) {
+    await supabase.from('question_reports').delete().eq('id', parseInt(reportId));
+  },
 
   // File correction notes
   async updateFileCorrectionNotes(fileId, notes) {
     const { data } = await supabase.from('files')
       .update({ correction_notes: notes }).eq('id', parseInt(fileId)).select().single();
     return data;
+  },
+
+  // Schedules (admin only)
+  async getSchedules() {
+    const { data, error } = await supabase.from('admin_schedules')
+      .select('*')
+      .order('date', { ascending: true });
+    if (error) { console.error('getSchedules error:', error); throw error; }
+    return data || [];
+  },
+  async createSchedule(date, title, note, createdBy) {
+    const { data, error } = await supabase.from('admin_schedules')
+      .insert({ date, title, note: note || null, created_by: createdBy })
+      .select().single();
+    if (error) { console.error('createSchedule error:', error); throw error; }
+    return data;
+  },
+  async updateSchedule(id, date, title, note) {
+    const { data, error } = await supabase.from('admin_schedules')
+      .update({ date, title, note: note || null })
+      .eq('id', parseInt(id))
+      .select().single();
+    if (error) { console.error('updateSchedule error:', error); throw error; }
+    return data;
+  },
+  async deleteSchedule(id) {
+    const { error } = await supabase.from('admin_schedules').delete().eq('id', parseInt(id));
+    if (error) { console.error('deleteSchedule error:', error); throw error; }
   },
 
   // Results

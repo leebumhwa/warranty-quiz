@@ -21,6 +21,13 @@ export default function Admin() {
   const [noticeMsg, setNoticeMsg] = useState('');
   const [editingNotice, setEditingNotice] = useState(null);
   const [editNoticeValue, setEditNoticeValue] = useState('');
+  const [schedules, setSchedules] = useState([]);
+  const [schedDate, setSchedDate] = useState('');
+  const [schedTitle, setSchedTitle] = useState('');
+  const [schedNote, setSchedNote] = useState('');
+  const [schedMsg, setSchedMsg] = useState('');
+  const [editingSchedule, setEditingSchedule] = useState(null);
+  const [editSchedForm, setEditSchedForm] = useState({});
   const [expandedQuiz, setExpandedQuiz] = useState(null);
   const [quizQuestions, setQuizQuestions] = useState({});
   const [editingQuestion, setEditingQuestion] = useState(null);
@@ -48,8 +55,11 @@ export default function Admin() {
   const loadResults = () => api.get('/results/all').then(r => setAllResults(r.data.results)).catch(() => {});
   const loadReports = () => api.get('/quizzes/reports').then(r => setReports(r.data.reports)).catch(() => {});
   const loadNotices = () => api.get('/notices').then(r => setNotices(r.data.notices)).catch(() => {});
+  const loadSchedules = () => api.get('/schedules')
+    .then(r => setSchedules(r.data.schedules))
+    .catch(err => setSchedMsg(`일정 로드 실패: ${err.response?.data?.error || err.message}`));
 
-  useEffect(() => { loadFiles(); loadQuizzes(); loadResults(); loadReports(); loadNotices(); }, []);
+  useEffect(() => { loadFiles(); loadQuizzes(); loadResults(); loadReports(); loadNotices(); loadSchedules(); }, []);
 
   // --- File management ---
   const handleUpload = async (e) => {
@@ -217,6 +227,12 @@ export default function Admin() {
     loadReports();
   };
 
+  const handleDeleteReport = async (reportId) => {
+    if (!window.confirm('이 신고를 삭제하시겠습니까?')) return;
+    await api.delete(`/quizzes/reports/${reportId}`);
+    loadReports();
+  };
+
   const handleSaveFileNotes = async (fileId) => {
     await api.patch(`/files/${fileId}/notes`, { notes: fileNotesValue });
     setEditingFileNotes(null);
@@ -227,7 +243,7 @@ export default function Admin() {
     <div className="page">
       <h1 className="page-title">관리자 패널</h1>
       <div className="tabs">
-        {[['files','파일 관리'],['generate','퀴즈 생성'],['quizzes','퀴즈 관리'],['results','사용자 결과'],['reports',`신고 관리${reports.filter(r=>!r.resolved).length > 0 ? ` (${reports.filter(r=>!r.resolved).length})` : ''}`],['notices','보증 소식']].map(([key,label]) => (
+        {[['files','파일 관리'],['generate','퀴즈 생성'],['quizzes','퀴즈 관리'],['results','사용자 결과'],['reports',`신고 관리${reports.filter(r=>!r.resolved).length > 0 ? ` (${reports.filter(r=>!r.resolved).length})` : ''}`],['notices','보증 소식'],['schedules','일정 관리']].map(([key,label]) => (
           <button key={key} className={`tab-btn ${tab===key?'active':''}`} onClick={() => setTab(key)}>{label}</button>
         ))}
       </div>
@@ -574,15 +590,18 @@ export default function Admin() {
                     신고 내용: {r.user_comment}
                   </div>
                 </div>
-                {!r.resolved && (
-                  <div style={{display:'flex', flexDirection:'column', gap:'4px', flexShrink:0}}>
-                    <button className="btn btn-secondary btn-sm"
-                      onClick={() => { setTab('quizzes'); setExpandedQuiz(r.quiz_id); handleExpandQuiz(r.quiz_id); }}>
-                      문제 수정
-                    </button>
-                    <button className="btn btn-success btn-sm" onClick={() => handleResolveReport(r.id)}>해결됨</button>
-                  </div>
-                )}
+                <div style={{display:'flex', flexDirection:'column', gap:'4px', flexShrink:0}}>
+                  {!r.resolved && (
+                    <>
+                      <button className="btn btn-secondary btn-sm"
+                        onClick={() => { setTab('quizzes'); setExpandedQuiz(r.quiz_id); handleExpandQuiz(r.quiz_id); }}>
+                        문제 수정
+                      </button>
+                      <button className="btn btn-success btn-sm" onClick={() => handleResolveReport(r.id)}>해결됨</button>
+                    </>
+                  )}
+                  <button className="btn btn-danger btn-sm" onClick={() => handleDeleteReport(r.id)}>삭제</button>
+                </div>
               </div>
             </div>
           ))}
@@ -669,6 +688,104 @@ export default function Admin() {
                     )}
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Schedules tab */}
+      {tab === 'schedules' && (
+        <div style={{ maxWidth: '600px' }}>
+          <div className="card mb-4">
+            <div className="card-title">📅 일정 등록</div>
+            <p className="text-sm text-muted mb-4">등록한 일정은 관리자 대시보드 사이드바와 달력에 표시됩니다.</p>
+            {schedMsg && <div className={`alert mb-3 ${schedMsg.includes('실패') ? 'alert-error' : 'alert-success'}`}>{schedMsg}</div>}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <div className="form-group" style={{ flex: '0 0 160px', marginBottom: 0 }}>
+                  <label className="form-label">날짜</label>
+                  <input type="date" className="form-input" value={schedDate} onChange={e => setSchedDate(e.target.value)} />
+                </div>
+                <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                  <label className="form-label">제목</label>
+                  <input type="text" className="form-input" placeholder="일정 제목" value={schedTitle} onChange={e => setSchedTitle(e.target.value)} />
+                </div>
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">메모 (선택)</label>
+                <input type="text" className="form-input" placeholder="간단한 메모" value={schedNote} onChange={e => setSchedNote(e.target.value)} />
+              </div>
+              <button className="btn btn-primary" style={{ alignSelf: 'flex-start' }} onClick={async () => {
+                if (!schedDate || !schedTitle.trim()) { setSchedMsg('날짜와 제목을 입력해주세요.'); return; }
+                try {
+                  await api.post('/schedules', { date: schedDate, title: schedTitle.trim(), note: schedNote.trim() });
+                  setSchedDate(''); setSchedTitle(''); setSchedNote('');
+                  setSchedMsg('일정이 등록되었습니다.');
+                  loadSchedules();
+                  setTimeout(() => setSchedMsg(''), 3000);
+                } catch (err) { setSchedMsg(`등록 실패: ${err.response?.data?.error || err.message}`); }
+              }}>등록</button>
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-title">등록된 일정 ({schedules.length}개)</div>
+            {schedules.length === 0 ? (
+              <div className="empty-state" style={{ padding: '24px' }}>등록된 일정이 없습니다.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {[...schedules].sort((a, b) => a.date.localeCompare(b.date)).map(s => {
+                  const isPast = new Date(s.date) < new Date(new Date().toDateString());
+                  return (
+                    <div key={s.id} style={{
+                      padding: '10px 14px', background: 'var(--bg)', borderRadius: 'var(--radius)',
+                      borderLeft: `3px solid ${isPast ? 'var(--border)' : 'var(--primary)'}`,
+                      opacity: isPast ? 0.6 : 1,
+                    }}>
+                      {editingSchedule === s.id ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <input type="date" className="form-input" style={{ flex: '0 0 150px', fontSize: '0.85rem' }}
+                              value={editSchedForm.date} onChange={e => setEditSchedForm(f => ({ ...f, date: e.target.value }))} />
+                            <input type="text" className="form-input" style={{ flex: 1, fontSize: '0.85rem' }}
+                              value={editSchedForm.title} onChange={e => setEditSchedForm(f => ({ ...f, title: e.target.value }))} />
+                          </div>
+                          <input type="text" className="form-input" style={{ fontSize: '0.85rem' }}
+                            placeholder="메모 (선택)" value={editSchedForm.note || ''} onChange={e => setEditSchedForm(f => ({ ...f, note: e.target.value }))} />
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <button className="btn btn-primary btn-sm" onClick={async () => {
+                              if (!editSchedForm.date || !editSchedForm.title?.trim()) return;
+                              await api.patch(`/schedules/${s.id}`, editSchedForm);
+                              setEditingSchedule(null);
+                              loadSchedules();
+                            }}>저장</button>
+                            <button className="btn btn-secondary btn-sm" onClick={() => setEditingSchedule(null)}>취소</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '2px' }}>
+                              {new Date(s.date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })}
+                              {isPast && <span style={{ marginLeft: '6px', color: 'var(--text-muted)' }}>· 지남</span>}
+                            </div>
+                            <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)' }}>{s.title}</div>
+                            {s.note && <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>{s.note}</div>}
+                          </div>
+                          <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                            <button className="btn btn-secondary btn-sm" onClick={() => { setEditingSchedule(s.id); setEditSchedForm({ date: s.date, title: s.title, note: s.note || '' }); }}>수정</button>
+                            <button className="btn btn-danger btn-sm" onClick={async () => {
+                              if (!window.confirm('이 일정을 삭제하시겠습니까?')) return;
+                              await api.delete(`/schedules/${s.id}`);
+                              loadSchedules();
+                            }}>삭제</button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

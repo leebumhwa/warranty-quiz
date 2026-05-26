@@ -76,6 +76,57 @@ export default function TakeQuiz() {
     }
   };
 
+  const handlePrint = () => {
+    const win = window.open('', '_blank');
+    win.document.write(`<!DOCTYPE html><html lang="ko"><head>
+      <meta charset="UTF-8">
+      <title>${quiz?.title || '퀴즈'} — 인쇄</title>
+      <style>
+        body { font-family: 'Malgun Gothic', sans-serif; max-width: 740px; margin: 0 auto; padding: 32px 24px; color: #0f172a; }
+        h1 { font-size: 1.4rem; margin-bottom: 4px; }
+        .meta { font-size: 0.8rem; color: #64748b; margin-bottom: 24px; }
+        .question { margin-bottom: 28px; page-break-inside: avoid; }
+        .q-num { font-size: 0.75rem; color: #64748b; font-weight: 600; margin-bottom: 4px; }
+        .q-text { font-size: 1rem; font-weight: 600; margin-bottom: 10px; line-height: 1.5; }
+        .options { display: flex; flex-direction: column; gap: 6px; }
+        .option { display: flex; align-items: flex-start; gap: 8px; font-size: 0.9rem; padding: 6px 10px; border: 1px solid #e2e8f0; border-radius: 6px; }
+        .opt-label { font-weight: 700; min-width: 20px; }
+        ${submitted ? `.correct { border-color: #16a34a !important; background: #dcfce7; }
+        .wrong { border-color: #dc2626 !important; background: #fee2e2; }
+        .answer { margin-top: 8px; font-size: 0.8rem; color: #16a34a; font-weight: 600; }
+        .explanation { font-size: 0.8rem; color: #64748b; margin-top: 4px; }` : ''}
+        hr { border: none; border-top: 1px solid #e2e8f0; margin: 20px 0; }
+        @media print { body { padding: 0; } }
+      </style>
+    </head><body>
+      <h1>${quiz?.title || '퀴즈'}</h1>
+      <div class="meta">총 ${questions.length}문제${submitted ? ` · 정답률 ${Math.round((score / questions.length) * 100)}%` : ''} · ${new Date().toLocaleDateString('ko-KR')}</div>
+      <hr>
+      ${questions.map((q, i) => {
+        const sel = answers[q.id];
+        return `<div class="question">
+          <div class="q-num">문제 ${i + 1}</div>
+          <div class="q-text">${q.question_text}</div>
+          <div class="options">
+            ${q.options.map((opt, oi) => {
+              let cls = 'option';
+              if (submitted) {
+                if (oi === q.correct_answer) cls += ' correct';
+                else if (oi === sel && sel !== q.correct_answer) cls += ' wrong';
+              }
+              return `<div class="${cls}"><span class="opt-label">${String.fromCharCode(65 + oi)}.</span><span>${opt}</span></div>`;
+            }).join('')}
+          </div>
+          ${submitted ? `<div class="answer">정답: ${String.fromCharCode(65 + q.correct_answer)}. ${q.options[q.correct_answer]}</div>
+          ${q.explanation ? `<div class="explanation">해설: ${q.explanation}</div>` : ''}` : ''}
+        </div>`;
+      }).join('')}
+    </body></html>`);
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 300);
+  };
+
   if (loading) return <div className="loading-screen">퀴즈 로딩 중...</div>;
   if (error) return <div className="page"><div className="alert alert-error">{error}</div><Link to="/dashboard" className="btn btn-secondary">돌아가기</Link></div>;
 
@@ -98,13 +149,17 @@ export default function TakeQuiz() {
               <Link to="/dashboard" className="btn btn-secondary btn-sm">목록으로</Link>
               <Link to="/results" className="btn btn-primary btn-sm">내 기록 보기</Link>
               <button className="btn btn-success btn-sm" onClick={() => { setSubmitted(false); setAnswers({}); }}>다시 풀기</button>
+              <button className="btn btn-secondary btn-sm" onClick={handlePrint}>🖨️ 인쇄</button>
             </div>
           </div>
           <h2 style={{marginBottom:'16px', fontSize:'1rem', fontWeight:600}}>문제별 결과</h2>
         </>
       ) : (
         <div style={{marginBottom:'24px'}}>
-          <Link to="/dashboard" className="text-muted text-sm" style={{textDecoration:'none'}}>← 목록으로</Link>
+          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+            <Link to="/dashboard" className="text-muted text-sm" style={{textDecoration:'none'}}>← 목록으로</Link>
+            <button className="btn btn-secondary btn-sm" onClick={handlePrint}>🖨️ 인쇄</button>
+          </div>
           <h1 className="page-title" style={{marginTop:'8px'}}>{quiz?.title}</h1>
           <p className="text-muted text-sm">{questions.length}개 문제 · 모든 문제에 답한 후 제출하세요</p>
         </div>

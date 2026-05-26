@@ -75,20 +75,36 @@ export function ClockWidget() {
   );
 }
 
-export function CalendarWidget() {
+function getISOWeek(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+  const yearStart = new Date(d.getFullYear(), 0, 1);
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
+export function CalendarWidget({ scheduleDates }) {
   const today = new Date();
   const [viewing, setViewing] = useState({ y: today.getFullYear(), m: today.getMonth() });
 
   const firstDay = new Date(viewing.y, viewing.m, 1).getDay();
   const daysInMonth = new Date(viewing.y, viewing.m + 1, 0).getDate();
   const isToday = (d) => d === today.getDate() && viewing.m === today.getMonth() && viewing.y === today.getFullYear();
+  const hasSchedule = (d) => {
+    if (!scheduleDates || !d) return false;
+    const key = `${viewing.y}-${String(viewing.m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    return scheduleDates.has(key);
+  };
 
   const prev = () => setViewing(v => v.m === 0 ? { y: v.y - 1, m: 11 } : { y: v.y, m: v.m - 1 });
   const next = () => setViewing(v => v.m === 11 ? { y: v.y + 1, m: 0 } : { y: v.y, m: v.m + 1 });
 
-  const cells = [];
-  for (let i = 0; i < firstDay; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  const flat = [];
+  for (let i = 0; i < firstDay; i++) flat.push(null);
+  for (let d = 1; d <= daysInMonth; d++) flat.push(d);
+  while (flat.length % 7 !== 0) flat.push(null);
+  const rows = [];
+  for (let i = 0; i < flat.length; i += 7) rows.push(flat.slice(i, i + 7));
 
   return (
     <div className="widget-card">
@@ -100,16 +116,91 @@ export function CalendarWidget() {
         <button onClick={next} className="cal-nav">›</button>
       </div>
       <div className="cal-grid">
+        <div className="cal-head" style={{ color: 'var(--primary)', opacity: 0.5 }}>W</div>
         {['일', '월', '화', '수', '목', '금', '토'].map((d, i) => (
           <div key={d} className="cal-head" style={{ color: i === 0 ? 'var(--error)' : i === 6 ? 'var(--primary)' : 'var(--text-muted)' }}>{d}</div>
         ))}
-        {cells.map((d, i) => (
-          <div key={i} className={`cal-cell${d && isToday(d) ? ' cal-today' : ''}`}
-            style={{ color: d ? (i % 7 === 0 ? 'var(--error)' : i % 7 === 6 ? 'var(--primary)' : 'var(--text)') : '' }}>
-            {d || ''}
-          </div>
-        ))}
+        {rows.map((row, ri) => {
+          const firstNonNull = row.find(d => d !== null);
+          const weekNum = firstNonNull ? getISOWeek(new Date(viewing.y, viewing.m, firstNonNull)) : '';
+          return (
+            <>
+              <div key={`w${ri}`} className="cal-week">{weekNum}</div>
+              {row.map((d, ci) => (
+                <div key={`${ri}-${ci}`} className={`cal-cell${d && isToday(d) ? ' cal-today' : ''}`}
+                  style={{ color: d ? (ci === 0 ? 'var(--error)' : ci === 6 ? 'var(--primary)' : 'var(--text)') : '', position: 'relative' }}>
+                  {d || ''}
+                  {hasSchedule(d) && (
+                    <span style={{
+                      position: 'absolute', bottom: '1px', left: '50%', transform: 'translateX(-50%)',
+                      width: '4px', height: '4px', borderRadius: '50%',
+                      background: isToday(d) ? 'white' : 'var(--primary)', display: 'block',
+                    }} />
+                  )}
+                </div>
+              ))}
+            </>
+          );
+        })}
       </div>
+    </div>
+  );
+}
+
+export function AdminScheduleWidget({ schedules }) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const upcoming = schedules
+    .filter(s => new Date(s.date) >= today)
+    .slice(0, 5);
+  const past = schedules
+    .filter(s => new Date(s.date) < today)
+    .slice(-2)
+    .reverse();
+
+  const fmtDate = (dateStr) => {
+    const d = new Date(dateStr);
+    const diff = Math.round((d - today) / 86400000);
+    const label = diff === 0 ? '오늘' : diff === 1 ? '내일' : diff === 2 ? '모레' : null;
+    const dateLabel = d.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', weekday: 'short' });
+    return label ? <><strong style={{ color: 'var(--primary)' }}>{label}</strong> · {dateLabel}</> : dateLabel;
+  };
+
+  return (
+    <div className="widget-card">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+        <div className="widget-label">📅 관리자 일정</div>
+        <a href="/admin" style={{ fontSize: '0.7rem', color: 'var(--primary)', textDecoration: 'none' }}>관리 →</a>
+      </div>
+      {schedules.length === 0 ? (
+        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textAlign: 'center', padding: '8px 0' }}>등록된 일정이 없습니다.</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {past.map(s => (
+            <div key={s.id} style={{ opacity: 0.45, display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', paddingTop: '1px', minWidth: '60px' }}>
+                {new Date(s.date).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
+              </span>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textDecoration: 'line-through' }}>{s.title}</span>
+            </div>
+          ))}
+          {upcoming.map(s => (
+            <div key={s.id} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', paddingTop: '2px', minWidth: '60px' }}>
+                {fmtDate(s.date)}
+              </span>
+              <div>
+                <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text)', lineHeight: 1.3 }}>{s.title}</div>
+                {s.note && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '1px' }}>{s.note}</div>}
+              </div>
+            </div>
+          ))}
+          {upcoming.length === 0 && (
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>예정된 일정이 없습니다.</div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

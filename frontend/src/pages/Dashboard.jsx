@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
-import { ClockWidget, CalendarWidget, WeatherWidget, NoticesWidget, LeaderboardWidget } from '../components/DashboardWidgets';
+import { useAuth } from '../contexts/AuthContext';
+import { ClockWidget, CalendarWidget, WeatherWidget, NoticesWidget, LeaderboardWidget, AdminScheduleWidget } from '../components/DashboardWidgets';
 
 function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -45,17 +46,23 @@ function QuizCard({ quiz }) {
 }
 
 export default function Dashboard() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const [schedules, setSchedules] = useState([]);
 
   useEffect(() => {
     api.get('/quizzes')
       .then(res => setQuizzes(res.data.quizzes))
       .catch(() => setError('퀴즈 목록을 불러오지 못했습니다.'))
       .finally(() => setLoading(false));
-  }, []);
+    if (isAdmin) {
+      api.get('/schedules').then(r => setSchedules(r.data.schedules)).catch(() => {});
+    }
+  }, [isAdmin]);
 
   const filtered = quizzes.filter(q =>
     q.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -108,9 +115,10 @@ export default function Dashboard() {
         <aside className="dashboard-sidebar">
           <ClockWidget />
           <WeatherWidget />
+          {isAdmin && <AdminScheduleWidget schedules={schedules} />}
           <LeaderboardWidget />
           <NoticesWidget />
-          <CalendarWidget />
+          <CalendarWidget scheduleDates={isAdmin ? new Set(schedules.map(s => s.date)) : null} />
         </aside>
       </div>
     </div>

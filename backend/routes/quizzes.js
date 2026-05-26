@@ -13,7 +13,7 @@ function parseQuestions(text) {
   return JSON.parse(clean);
 }
 
-async function callOpenRouter(prompt) {
+async function callOpenRouter(prompt, options = {}) {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error('OPENROUTER_API_KEY가 설정되지 않았습니다. backend/.env 파일을 확인해주세요.');
 
@@ -29,7 +29,7 @@ async function callOpenRouter(prompt) {
     },
     body: JSON.stringify({
       model,
-      max_tokens: 1500,
+      max_tokens: options?.maxTokens || 4000,
       temperature: 1.0,
       messages: [{ role: 'user', content: prompt }],
     }),
@@ -62,16 +62,24 @@ router.post('/generate', authenticate, requireAdmin, async (req, res) => {
   const files = await db.getFilesByIds(fileIds);
   if (files.length === 0) return res.status(400).json({ error: '선택된 파일을 찾을 수 없습니다.' });
 
+  // 생성일 오름차순 정렬 (오래된 순 → 최신 순) — 최신 파일이 마지막에 위치해 우선권 가짐
+  const sortedFiles = [...files].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
   const MAX_CONTENT = 60000;
-  let content = files.map(f => `=== ${f.original_name} ===\n${f.content}`).join('\n\n');
+  let content = sortedFiles.map(f => {
+    const dateStr = new Date(f.created_at).toLocaleDateString('ko-KR');
+    return `=== ${f.original_name} (업로드일: ${dateStr}) ===\n${f.content}`;
+  }).join('\n\n');
   if (content.length > MAX_CONTENT) content = content.substring(0, MAX_CONTENT) + '\n...(이하 생략)';
 
-  const correctionNotes = files
+  const correctionNotes = sortedFiles
     .filter(f => f.correction_notes?.trim())
     .map(f => `[${f.original_name}] ${f.correction_notes}`)
     .join('\n');
 
   const prompt = `다음 문서 내용을 바탕으로 정확히 ${count}개의 4지선다 퀴즈 문제를 만들어주세요.${correctionNotes ? `\n\n⚠️ 이전에 발견된 오류 참고사항 (반드시 반영):\n${correctionNotes}` : ''}
+
+⚠️ 파일 간 내용 충돌 처리 규칙: 여러 파일에서 동일한 항목에 대해 서로 다른 내용이 있을 경우, 업로드일이 최신인 파일의 내용을 정답 기준으로 적용하세요.
 
 반드시 아래 JSON 배열 형식만 반환하세요. 다른 텍스트는 절대 포함하지 마세요:
 [
@@ -94,12 +102,16 @@ router.post('/generate', authenticate, requireAdmin, async (req, res) => {
 문서 내용:
 ${content}`;
 
+  // 문제 수에 따라 max_tokens 동적 조절 (한국어 기준 문제당 약 600 토큰)
+  const maxTokens = Math.min(Math.max(count * 700, 2000), 16000);
+
   try {
-    const responseText = await callOpenRouter(prompt);
+    const responseText = await callOpenRouter(prompt, { maxTokens });
     let questions;
     try {
       questions = parseQuestions(responseText);
-    } catch {
+    } catch (parseErr) {
+      console.error('AI 응답 파싱 실패. 실제 응답:', responseText);
       return res.status(500).json({ error: 'AI 응답 파싱 실패. 다시 시도해주세요.' });
     }
 
@@ -161,6 +173,16 @@ router.patch('/reports/:id/resolve', authenticate, requireAdmin, async (req, res
   try {
     const report = await db.resolveReport(req.params.id);
     res.json({ report });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /quizzes/reports/:id - admin delete report
+router.delete('/reports/:id', authenticate, requireAdmin, async (req, res) => {
+  try {
+    await db.deleteReport(req.params.id);
+    res.json({ message: '신고가 삭제되었습니다.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
