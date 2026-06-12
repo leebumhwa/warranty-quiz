@@ -9,9 +9,12 @@ const SECRET = process.env.JWT_SECRET || 'default_secret';
 
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, name } = req.body;
+    const { email, password, name, privacyAgreed } = req.body;
     if (!email || !password || !name) {
       return res.status(400).json({ error: '이메일, 비밀번호, 이름을 모두 입력해주세요.' });
+    }
+    if (!privacyAgreed) {
+      return res.status(400).json({ error: '개인정보 수집·이용에 동의해주세요.' });
     }
     if (password.length < 6) {
       return res.status(400).json({ error: '비밀번호는 6자 이상이어야 합니다.' });
@@ -20,7 +23,7 @@ router.post('/register', async (req, res) => {
       return res.status(409).json({ error: '이미 사용 중인 이메일입니다.' });
     }
     const hashed = bcrypt.hashSync(password, 10);
-    const user = await db.createUser(email, hashed, name, 'user');
+    const user = await db.createUser(email, hashed, name, 'user', new Date().toISOString());
     const token = jwt.sign({ id: user.id }, SECRET, { expiresIn: '7d' });
     res.status(201).json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
   } catch (err) {

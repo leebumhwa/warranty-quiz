@@ -18,10 +18,13 @@ const db = {
     const { data } = await supabase.from('users').select('*').eq('id', parseInt(id)).maybeSingle();
     return data || null;
   },
-  async createUser(email, password, name, role = 'user') {
+  async createUser(email, password, name, role = 'user', privacyAgreedAt = null) {
     const existing = await db.getUserByEmail(email);
     if (existing) return null;
-    const { data } = await supabase.from('users').insert({ email, password, name, role }).select().single();
+    const { data } = await supabase
+      .from('users')
+      .insert({ email, password, name, role, privacy_agreed_at: privacyAgreedAt })
+      .select().single();
     return data;
   },
 
