@@ -13,7 +13,10 @@ export default function Navbar() {
     navigate('/login');
   };
 
-  const isActive = (path) => location.pathname === path ? 'nav-link active' : 'nav-link';
+  const isActive = (path) =>
+    location.pathname === path || location.pathname.startsWith(path + '/')
+      ? 'nav-link active'
+      : 'nav-link';
 
   const themeBtn = (
     <button className="btn-theme" onClick={toggle} title={dark ? '라이트 모드' : '다크 모드'}>
@@ -39,7 +42,8 @@ export default function Navbar() {
         {themeBtn}
         <Link to="/dashboard" className={isActive('/dashboard')}>퀴즈 목록</Link>
         <Link to="/results" className={isActive('/results')}>내 기록</Link>
-        <Link to="/leaderboard" className={isActive('/leaderboard')}>랭킹</Link>
+        <Link to="/community" className={isActive('/community')}>💬 커뮤니티</Link>
+        <Link to="/ranking" className={isActive('/ranking')}>🏆 랭킹</Link>
         {user.role === 'admin' && (
           <Link to="/admin" className={isActive('/admin')}>관리자</Link>
         )}

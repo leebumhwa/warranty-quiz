@@ -9,6 +9,9 @@ import TakeQuiz from './pages/TakeQuiz';
 import MyResults from './pages/MyResults';
 import Admin from './pages/Admin';
 import Leaderboard from './pages/Leaderboard';
+import Community from './pages/Community';
+import PostDetail from './pages/PostDetail';
+import Ranking from './pages/Ranking';
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
@@ -38,6 +41,9 @@ function AppRoutes() {
           <Route path="/quiz/:id" element={<PrivateRoute><TakeQuiz /></PrivateRoute>} />
           <Route path="/results" element={<PrivateRoute><MyResults /></PrivateRoute>} />
           <Route path="/leaderboard" element={<PrivateRoute><Leaderboard /></PrivateRoute>} />
+          <Route path="/community" element={<PrivateRoute><Community /></PrivateRoute>} />
+          <Route path="/community/posts/:id" element={<PrivateRoute><PostDetail /></PrivateRoute>} />
+          <Route path="/ranking" element={<PrivateRoute><Ranking /></PrivateRoute>} />
           <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

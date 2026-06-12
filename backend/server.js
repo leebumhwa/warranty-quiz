@@ -25,6 +25,9 @@ app.use('/api/quizzes', require('./routes/quizzes'));
 app.use('/api/results', require('./routes/results'));
 app.use('/api/notices', require('./routes/notices'));
 app.use('/api/schedules', require('./routes/schedules'));
+app.use('/api/source-files', require('./routes/source-files'));
+app.use('/api/community', require('./routes/community'));
+app.use('/api/ranking', require('./routes/ranking'));
 
 app.use((err, req, res, next) => {
   console.error(err.stack);

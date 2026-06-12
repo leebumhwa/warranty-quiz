@@ -52,6 +52,87 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
+// GET /quizzes/public — 공개 퀴즈만 (대시보드 "공식 퀴즈" 탭)
+router.get('/public', authenticate, async (req, res) => {
+  try {
+    res.json({ quizzes: await db.getPublicQuizzes() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /quizzes/my — 현재 사용자의 비공개 퀴즈
+router.get('/my', authenticate, async (req, res) => {
+  try {
+    res.json({ quizzes: await db.getPrivateQuizzesByUser(req.user.id) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /quizzes/generate-private — 일반 사용자 퀴즈 생성 (비공개)
+router.post('/generate-private', authenticate, async (req, res) => {
+  const { title, description, questionCount } = req.body;
+  if (!title?.trim()) {
+    return res.status(400).json({ error: '퀴즈 제목을 입력해주세요.' });
+  }
+  const count = Math.min(Math.max(parseInt(questionCount) || 5, 1), 20);
+
+  const sourceFile = await db.getActiveSourceFile();
+  if (!sourceFile) {
+    return res.status(400).json({ error: '현재 지정된 소스 파일이 없습니다. 관리자에게 문의하세요.' });
+  }
+
+  const MAX_CONTENT = 60000;
+  let content = sourceFile.content;
+  if (content.length > MAX_CONTENT) content = content.substring(0, MAX_CONTENT) + '\n...(이하 생략)';
+
+  const prompt = `다음 문서 내용을 바탕으로 정확히 ${count}개의 4지선다 퀴즈 문제를 만들어주세요.
+
+반드시 아래 JSON 배열 형식만 반환하세요. 다른 텍스트는 절대 포함하지 마세요:
+[
+  {
+    "question": "문제 내용",
+    "options": ["선택지1", "선택지2", "선택지3", "선택지4"],
+    "correct_answer": 0,
+    "explanation": "정답 설명"
+  }
+]
+
+규칙:
+- 반드시 한국어로 문제, 선택지, 설명을 작성할 것
+- correct_answer는 0~3 사이의 정수 (options 배열의 정답 인덱스)
+- 문서 내용에 근거한 문제만 출제
+- 명확하고 이해하기 쉬운 문제 작성
+- 반드시 ${count}개 작성
+- 다양한 관점(정의, 조건, 절차, 예외, 수치 등)에서 출제할 것
+
+문서 내용:
+${content}`;
+
+  const maxTokens = Math.min(Math.max(count * 700, 2000), 16000);
+
+  try {
+    const responseText = await callOpenRouter(prompt, { maxTokens });
+    let questions;
+    try {
+      questions = parseQuestions(responseText);
+    } catch {
+      return res.status(500).json({ error: 'AI 응답 파싱 실패. 다시 시도해주세요.' });
+    }
+    if (!Array.isArray(questions) || questions.length === 0) {
+      return res.status(500).json({ error: '문제가 생성되지 않았습니다. 다시 시도해주세요.' });
+    }
+    const result = await db.createPrivateQuizWithQuestions(
+      title.trim(), description?.trim() || '', req.user.id, questions
+    );
+    res.json(result);
+  } catch (err) {
+    console.error('Private quiz generation error:', err);
+    res.status(500).json({ error: `퀴즈 생성 실패: ${err.message}` });
+  }
+});
+
 router.post('/generate', authenticate, requireAdmin, async (req, res) => {
   const { title, description, fileIds, questionCount } = req.body;
   if (!title || !fileIds || fileIds.length === 0) {
@@ -92,6 +173,7 @@ router.post('/generate', authenticate, requireAdmin, async (req, res) => {
 ]
 
 규칙:
+- 문서 언어와 관계없이 반드시 한국어로 문제, 선택지, 설명을 작성할 것
 - correct_answer는 0~3 사이의 정수 (options 배열의 정답 인덱스)
 - 문서 내용에 근거한 문제만 출제
 - 명확하고 이해하기 쉬운 문제 작성
@@ -192,6 +274,9 @@ router.get('/:id', authenticate, async (req, res) => {
   try {
     const result = await db.getQuizById(req.params.id);
     if (!result) return res.status(404).json({ error: '퀴즈를 찾을 수 없습니다.' });
+    if (result.quiz.is_private && result.quiz.created_by !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: '접근 권한이 없습니다.' });
+    }
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });

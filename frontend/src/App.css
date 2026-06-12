@@ -372,3 +372,31 @@ tr:hover td { background: var(--bg); }
 /* Progress bar */
 .progress-bar { height: 8px; background: var(--border); border-radius: 999px; overflow: hidden; }
 .progress-fill { height: 100%; background: var(--primary); border-radius: 999px; transition: width 0.3s; }
+
+/* Community */
+.post-list-row {
+  display: grid;
+  grid-template-columns: 1fr 90px 60px 50px;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--card);
+  align-items: center;
+  transition: background 0.1s;
+}
+.post-list-row:hover { background: var(--bg); }
+.post-like-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: var(--radius);
+  border: 1.5px solid var(--border); background: transparent;
+  cursor: pointer; color: var(--text-muted); font-weight: 600;
+  font-size: 0.9rem; transition: all 0.15s;
+}
+.post-like-btn:hover:not(:disabled) { border-color: #ef4444; color: #ef4444; }
+.post-like-btn.liked { border-color: #ef4444; color: #ef4444; background: #fef2f2; }
+.post-like-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Ranking score bar */
+.ranking-score-bar {
+  display: flex; align-items: center; gap: 8px;
+}
+.ranking-score-bar .progress-bar { width: 80px; }

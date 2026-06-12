@@ -1,13 +1,125 @@
 import { useState, useEffect, useRef } from 'react';
 import api from '../api';
 
-function formatDate(d) {
-  return new Date(d).toLocaleString('ko-KR', { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
-}
 function formatSize(bytes) {
   if (bytes < 1024) return `${bytes}B`;
-  if (bytes < 1024 * 1024) return `${(bytes/1024).toFixed(1)}KB`;
-  return `${(bytes/1024/1024).toFixed(1)}MB`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)}MB`;
+}
+
+function SourceFilesTab() {
+  const [files, setFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [msg, setMsg] = useState('');
+  const fileRef = useRef(null);
+
+  const load = () => api.get('/source-files').then(r => setFiles(r.data.files)).catch(() => {});
+
+  useEffect(() => { load(); }, []);
+
+  const handleUpload = async (e) => {
+    e.preventDefault();
+    const file = fileRef.current?.files?.[0];
+    if (!file) { setMsg('파일을 선택해주세요.'); return; }
+    const formData = new FormData();
+    formData.append('file', file);
+    setUploading(true); setMsg('');
+    try {
+      await api.post('/source-files/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setMsg('업로드 완료!');
+      fileRef.current.value = '';
+      load();
+    } catch (err) {
+      setMsg(err.response?.data?.error || '업로드 실패');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleActivate = async (id) => {
+    try {
+      await api.patch(`/source-files/${id}/activate`);
+      setMsg('활성 파일이 변경되었습니다.');
+      load();
+      setTimeout(() => setMsg(''), 3000);
+    } catch (err) {
+      setMsg(err.response?.data?.error || '변경 실패');
+    }
+  };
+
+  const handleDelete = async (id, name) => {
+    if (!window.confirm(`"${name}" 파일을 삭제하시겠습니까?`)) return;
+    await api.delete(`/source-files/${id}`);
+    load();
+  };
+
+  const activeFile = files.find(f => f.is_active);
+
+  return (
+    <div>
+      <div className="card mb-4">
+        <div className="card-title">📂 소스 파일 업로드</div>
+        <p className="text-sm text-muted mb-4">
+          일반 사용자가 퀴즈를 생성할 때 사용할 기반 파일입니다. PDF, DOCX, TXT 지원. (최대 20MB)
+        </p>
+        {activeFile && (
+          <div style={{ marginBottom: '16px', padding: '8px 12px', background: 'var(--bg)', borderRadius: 'var(--radius)', borderLeft: '3px solid var(--success)', fontSize: '0.85rem' }}>
+            현재 활성 파일: <strong style={{ color: 'var(--success)' }}>{activeFile.name}</strong>
+          </div>
+        )}
+        <form onSubmit={handleUpload}>
+          <div className="form-group">
+            <label className="form-label">파일 선택</label>
+            <input ref={fileRef} type="file" className="form-input" accept=".pdf,.doc,.docx,.txt,.md" />
+          </div>
+          <button type="submit" className="btn btn-primary" disabled={uploading}>
+            {uploading ? <><span className="spinner" /> 업로드 중...</> : '업로드'}
+          </button>
+        </form>
+        {msg && (
+          <div className={`alert mt-3 ${msg.includes('완료') || msg.includes('변경') ? 'alert-success' : 'alert-error'}`}>
+            {msg}
+          </div>
+        )}
+      </div>
+
+      <div className="card">
+        <div className="card-title">업로드된 소스 파일 ({files.length}개)</div>
+        {files.length === 0 ? (
+          <div className="empty-state" style={{ padding: '24px' }}>업로드된 소스 파일이 없습니다.</div>
+        ) : (
+          <div className="file-list">
+            {files.map(f => (
+              <div key={f.id} className="file-item"
+                style={{ background: f.is_active ? 'var(--success-light)' : 'var(--bg)', borderColor: f.is_active ? 'var(--success)' : 'var(--border)' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span className="file-name">{f.name}</span>
+                    {f.is_active && (
+                      <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '1px 8px', borderRadius: '999px', background: 'var(--success)', color: '#fff' }}>
+                        활성
+                      </span>
+                    )}
+                  </div>
+                  <div className="file-meta">{formatSize(f.file_size)} · {f.uploader_name} · {new Date(f.created_at).toLocaleDateString('ko-KR')}</div>
+                </div>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {!f.is_active && (
+                    <button className="btn btn-success btn-sm" onClick={() => handleActivate(f.id)}>지정</button>
+                  )}
+                  <button className="btn btn-danger btn-sm" onClick={() => handleDelete(f.id, f.name)}>삭제</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function formatDate(d) {
+  return new Date(d).toLocaleString('ko-KR', { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
 }
 
 export default function Admin() {
@@ -101,16 +213,27 @@ export default function Admin() {
     if (selectedFiles.length === 0) { setGenError('파일을 하나 이상 선택해주세요.'); return; }
     setGenerating(true); setGenError(''); setGenMsg('');
     try {
-      const res = await api.post('/quizzes/generate', {
-        title: quizTitle, description: quizDesc,
-        fileIds: selectedFiles, questionCount,
+      const token = localStorage.getItem('token');
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const res = await fetch(`${supabaseUrl}/functions/v1/generate-quiz`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: quizTitle, description: quizDesc,
+          fileIds: selectedFiles, questionCount,
+        }),
       });
-      const count = res.data.questions.length;
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '퀴즈 생성에 실패했습니다.');
+      const count = data.questions.length;
       setGenMsg(`"${quizTitle}" 퀴즈가 생성되었습니다. (${count}개 문제)`);
       setQuizTitle(''); setQuizDesc(''); setSelectedFiles([]); setQuestionCount(10);
       loadQuizzes();
     } catch (err) {
-      setGenError(err.response?.data?.error || '퀴즈 생성에 실패했습니다.');
+      setGenError(err.message || '퀴즈 생성에 실패했습니다.');
     } finally {
       setGenerating(false);
     }
@@ -243,7 +366,7 @@ export default function Admin() {
     <div className="page">
       <h1 className="page-title">관리자 패널</h1>
       <div className="tabs">
-        {[['files','파일 관리'],['generate','퀴즈 생성'],['quizzes','퀴즈 관리'],['results','사용자 결과'],['reports',`신고 관리${reports.filter(r=>!r.resolved).length > 0 ? ` (${reports.filter(r=>!r.resolved).length})` : ''}`],['notices','보증 소식'],['schedules','일정 관리']].map(([key,label]) => (
+        {[['files','파일 관리'],['source','소스 파일 관리'],['generate','퀴즈 생성'],['quizzes','퀴즈 관리'],['results','사용자 결과'],['reports',`신고 관리${reports.filter(r=>!r.resolved).length > 0 ? ` (${reports.filter(r=>!r.resolved).length})` : ''}`],['notices','보증 소식'],['schedules','일정 관리']].map(([key,label]) => (
           <button key={key} className={`tab-btn ${tab===key?'active':''}`} onClick={() => setTab(key)}>{label}</button>
         ))}
       </div>
@@ -313,11 +436,14 @@ export default function Admin() {
         </div>
       )}
 
+      {/* Source files tab */}
+      {tab === 'source' && <SourceFilesTab />}
+
       {/* Generate tab */}
       {tab === 'generate' && (
         <div className="card" style={{maxWidth:'600px'}}>
           <div className="card-title">AI 퀴즈 생성</div>
-          <p className="text-sm text-muted mb-4">선택한 파일의 내용을 바탕으로 Claude AI가 퀴즈를 자동 생성합니다.</p>
+          <p className="text-sm text-muted mb-4">선택한 파일의 내용을 바탕으로 Claude AI가 퀴즈를 자동 생성합니다. (하루 최대 5회)</p>
           {genMsg && <div className="alert alert-success">{genMsg}</div>}
           {genError && <div className="alert alert-error">{genError}</div>}
           <form onSubmit={handleGenerate}>
