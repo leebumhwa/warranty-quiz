@@ -44,6 +44,7 @@ export default function Navbar() {
         <Link to="/results" className={isActive('/results')}>내 기록</Link>
         <Link to="/community" className={isActive('/community')}>💬 커뮤니티</Link>
         <Link to="/ranking" className={isActive('/ranking')}>🏆 랭킹</Link>
+        <Link to="/chat" className={isActive('/chat')}>🤖 챗봇</Link>
         {user.role === 'admin' && (
           <Link to="/admin" className={isActive('/admin')}>관리자</Link>
         )}

@@ -72,6 +72,15 @@ const db = {
     return data;
   },
 
+  // ── Chatbot files ─────────────────────────────────────────────────────────
+  async getChatbotFiles() {
+    const { data } = await supabase
+      .from('files')
+      .select('id, original_name, content, correction_notes')
+      .order('created_at', { ascending: false });
+    return data || [];
+  },
+
   // ── Source files (admin-designated file for user quiz generation) ──────────
   async getSourceFiles() {
     const { data: files } = await supabase

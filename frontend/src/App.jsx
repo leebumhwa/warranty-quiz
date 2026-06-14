@@ -12,6 +12,7 @@ import Leaderboard from './pages/Leaderboard';
 import Community from './pages/Community';
 import PostDetail from './pages/PostDetail';
 import Ranking from './pages/Ranking';
+import Chat from './pages/Chat';
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
@@ -44,6 +45,7 @@ function AppRoutes() {
           <Route path="/community" element={<PrivateRoute><Community /></PrivateRoute>} />
           <Route path="/community/posts/:id" element={<PrivateRoute><PostDetail /></PrivateRoute>} />
           <Route path="/ranking" element={<PrivateRoute><Ranking /></PrivateRoute>} />
+          <Route path="/chat" element={<PrivateRoute><Chat /></PrivateRoute>} />
           <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
