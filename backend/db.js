@@ -334,7 +334,10 @@ const db = {
     return results.map(r => ({ ...r, quiz_title: quizMap[r.quiz_id] || '삭제된 퀴즈' }));
   },
   async getLeaderboard() {
-    const { data: results } = await supabase.from('results').select('user_id, score, total');
+    const { data: publicQuizzes } = await supabase.from('quizzes').select('id').eq('is_private', false);
+    const publicQuizIds = (publicQuizzes || []).map(q => q.id);
+    if (publicQuizIds.length === 0) return [];
+    const { data: results } = await supabase.from('results').select('user_id, score, total').in('quiz_id', publicQuizIds);
     if (!results || results.length === 0) return [];
     const userStats = {};
     for (const r of results) {
