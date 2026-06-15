@@ -78,13 +78,13 @@ router.post('/generate-private', authenticate, async (req, res) => {
   }
   const count = Math.min(Math.max(parseInt(questionCount) || 5, 1), 20);
 
-  const sourceFile = await db.getActiveSourceFile();
-  if (!sourceFile) {
+  const sourceFiles = await db.getActiveSourceFiles();
+  if (!sourceFiles || sourceFiles.length === 0) {
     return res.status(400).json({ error: '현재 지정된 소스 파일이 없습니다. 관리자에게 문의하세요.' });
   }
 
   const MAX_CONTENT = 60000;
-  let content = sourceFile.content;
+  let content = sourceFiles.map(f => `=== ${f.name} ===\n${f.content}`).join('\n\n');
   if (content.length > MAX_CONTENT) content = content.substring(0, MAX_CONTENT) + '\n...(이하 생략)';
 
   const prompt = `다음 문서 내용을 바탕으로 정확히 ${count}개의 4지선다 퀴즈 문제를 만들어주세요.

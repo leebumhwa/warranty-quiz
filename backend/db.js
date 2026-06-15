@@ -93,9 +93,9 @@ const db = {
     const userMap = Object.fromEntries((users || []).map(u => [u.id, u.name]));
     return files.map(f => ({ ...f, uploader_name: userMap[f.uploaded_by] || '알 수 없음' }));
   },
-  async getActiveSourceFile() {
-    const { data } = await supabase.from('source_files').select('*').eq('is_active', true).maybeSingle();
-    return data || null;
+  async getActiveSourceFiles() {
+    const { data } = await supabase.from('source_files').select('*').eq('is_active', true).order('created_at', { ascending: false });
+    return data || [];
   },
   async createSourceFile(name, content, fileSize, uploadedBy) {
     const { data } = await supabase
@@ -104,10 +104,10 @@ const db = {
       .select().single();
     return data;
   },
-  async setActiveSourceFile(id) {
-    await supabase.from('source_files').update({ is_active: false }).neq('id', 0);
-    const { data } = await supabase.from('source_files')
-      .update({ is_active: true }).eq('id', parseInt(id)).select().single();
+  async toggleSourceFile(id) {
+    const { data: current } = await supabase.from('source_files').select('is_active').eq('id', parseInt(id)).maybeSingle();
+    const newState = !current?.is_active;
+    const { data } = await supabase.from('source_files').update({ is_active: newState }).eq('id', parseInt(id)).select().single();
     return data;
   },
   async deleteSourceFile(id) {

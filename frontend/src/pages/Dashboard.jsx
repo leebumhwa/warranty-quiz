@@ -53,7 +53,7 @@ function QuizCard({ quiz, isPrivate }) {
 }
 
 function CreateQuizForm({ onSuccess }) {
-  const [activeFile, setActiveFile] = useState(null);
+  const [activeFiles, setActiveFiles] = useState([]);
   const [fileLoading, setFileLoading] = useState(true);
   const [title, setTitle] = useState('');
   const [questionCount, setQuestionCount] = useState(10);
@@ -63,8 +63,8 @@ function CreateQuizForm({ onSuccess }) {
 
   useEffect(() => {
     api.get('/source-files/active')
-      .then(r => setActiveFile(r.data.file))
-      .catch(() => setActiveFile(null))
+      .then(r => setActiveFiles(r.data.files || []))
+      .catch(() => setActiveFiles([]))
       .finally(() => setFileLoading(false));
   }, []);
 
@@ -94,10 +94,12 @@ function CreateQuizForm({ onSuccess }) {
 
       {fileLoading ? (
         <p className="text-sm text-muted">파일 정보 로딩 중...</p>
-      ) : activeFile ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', padding: '8px 12px', background: 'var(--bg)', borderRadius: 'var(--radius)', borderLeft: '3px solid var(--success)' }}>
-          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>현재 생성 가능한 파일:</span>
-          <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--success)' }}>📄 {activeFile.name}</span>
+      ) : activeFiles.length > 0 ? (
+        <div style={{ marginBottom: '16px', padding: '10px 12px', background: 'var(--bg)', borderRadius: 'var(--radius)', borderLeft: '3px solid var(--success)' }}>
+          <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '4px' }}>현재 생성 가능한 파일 ({activeFiles.length}개)</div>
+          {activeFiles.map(f => (
+            <div key={f.id} style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--success)' }}>📄 {f.name}</div>
+          ))}
         </div>
       ) : (
         <div className="alert alert-warning" style={{ marginBottom: '12px' }}>
@@ -113,16 +115,16 @@ function CreateQuizForm({ onSuccess }) {
           <div className="form-group">
             <label className="form-label">퀴즈 세트 이름 *</label>
             <input type="text" className="form-input" placeholder="예: 보증 정책 복습"
-              value={title} onChange={e => setTitle(e.target.value)} disabled={!activeFile || generating} />
+              value={title} onChange={e => setTitle(e.target.value)} disabled={activeFiles.length === 0 || generating} />
           </div>
           <div className="form-group">
             <label className="form-label">문제 수 (1~20)</label>
             <input type="number" className="form-input" min={1} max={20}
               value={questionCount} onChange={e => setQuestionCount(parseInt(e.target.value) || 5)}
-              disabled={!activeFile || generating} />
+              disabled={activeFiles.length === 0 || generating} />
           </div>
           <button type="submit" className="btn btn-primary"
-            disabled={!activeFile || generating}>
+            disabled={activeFiles.length === 0 || generating}>
             {generating
               ? <><span className="spinner" /> AI가 문제를 생성 중입니다... (30초~1분 소요)</>
               : '퀴즈 생성'}

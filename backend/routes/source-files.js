@@ -21,12 +21,11 @@ async function extractText(file, name) {
   return file.buffer.toString('utf-8');
 }
 
-// GET /api/source-files/active — any authenticated user (to display filename)
+// GET /api/source-files/active — any authenticated user (to display filenames)
 router.get('/active', authenticate, async (req, res) => {
   try {
-    const file = await db.getActiveSourceFile();
-    if (!file) return res.json({ file: null });
-    res.json({ file: { id: file.id, name: file.name, created_at: file.created_at } });
+    const files = await db.getActiveSourceFiles();
+    res.json({ files: files.map(f => ({ id: f.id, name: f.name, created_at: f.created_at })) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -55,10 +54,10 @@ router.post('/upload', authenticate, requireAdmin, upload.single('file'), async 
   }
 });
 
-// PATCH /api/source-files/:id/activate — admin only
+// PATCH /api/source-files/:id/activate — toggle is_active (admin only)
 router.patch('/:id/activate', authenticate, requireAdmin, async (req, res) => {
   try {
-    const file = await db.setActiveSourceFile(req.params.id);
+    const file = await db.toggleSourceFile(req.params.id);
     res.json({ file });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -36,12 +36,10 @@ function SourceFilesTab() {
     }
   };
 
-  const handleActivate = async (id) => {
+  const handleToggle = async (id) => {
     try {
       await api.patch(`/source-files/${id}/activate`);
-      setMsg('활성 파일이 변경되었습니다.');
       load();
-      setTimeout(() => setMsg(''), 3000);
     } catch (err) {
       setMsg(err.response?.data?.error || '변경 실패');
     }
@@ -53,18 +51,22 @@ function SourceFilesTab() {
     load();
   };
 
-  const activeFile = files.find(f => f.is_active);
+  const activeFiles = files.filter(f => f.is_active);
 
   return (
     <div>
       <div className="card mb-4">
         <div className="card-title">📂 소스 파일 업로드</div>
         <p className="text-sm text-muted mb-4">
-          일반 사용자가 퀴즈를 생성할 때 사용할 기반 파일입니다. PDF, DOCX, TXT 지원. (최대 20MB)
+          일반 사용자가 퀴즈를 생성할 때 사용할 기반 파일입니다. PDF, DOCX, TXT 지원. (최대 20MB)<br />
+          <strong>복수 지정 가능</strong> — 지정된 모든 파일을 합쳐서 퀴즈를 생성합니다.
         </p>
-        {activeFile && (
-          <div style={{ marginBottom: '16px', padding: '8px 12px', background: 'var(--bg)', borderRadius: 'var(--radius)', borderLeft: '3px solid var(--success)', fontSize: '0.85rem' }}>
-            현재 활성 파일: <strong style={{ color: 'var(--success)' }}>{activeFile.name}</strong>
+        {activeFiles.length > 0 && (
+          <div style={{ marginBottom: '16px', padding: '10px 12px', background: 'var(--bg)', borderRadius: 'var(--radius)', borderLeft: '3px solid var(--success)', fontSize: '0.85rem' }}>
+            <div style={{ fontWeight: 600, color: 'var(--success)', marginBottom: '4px' }}>현재 지정된 파일 ({activeFiles.length}개)</div>
+            {activeFiles.map(f => (
+              <div key={f.id} style={{ color: 'var(--text)', fontSize: '0.82rem' }}>📄 {f.name}</div>
+            ))}
           </div>
         )}
         <form onSubmit={handleUpload}>
@@ -77,7 +79,7 @@ function SourceFilesTab() {
           </button>
         </form>
         {msg && (
-          <div className={`alert mt-3 ${msg.includes('완료') || msg.includes('변경') ? 'alert-success' : 'alert-error'}`}>
+          <div className={`alert mt-3 ${msg.includes('완료') ? 'alert-success' : 'alert-error'}`}>
             {msg}
           </div>
         )}
@@ -97,16 +99,19 @@ function SourceFilesTab() {
                     <span className="file-name">{f.name}</span>
                     {f.is_active && (
                       <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '1px 8px', borderRadius: '999px', background: 'var(--success)', color: '#fff' }}>
-                        활성
+                        지정됨
                       </span>
                     )}
                   </div>
                   <div className="file-meta">{formatSize(f.file_size)} · {f.uploader_name} · {new Date(f.created_at).toLocaleDateString('ko-KR')}</div>
                 </div>
                 <div style={{ display: 'flex', gap: '6px' }}>
-                  {!f.is_active && (
-                    <button className="btn btn-success btn-sm" onClick={() => handleActivate(f.id)}>지정</button>
-                  )}
+                  <button
+                    className={`btn btn-sm ${f.is_active ? 'btn-secondary' : 'btn-success'}`}
+                    onClick={() => handleToggle(f.id)}
+                  >
+                    {f.is_active ? '지정 해제' : '지정'}
+                  </button>
                   <button className="btn btn-danger btn-sm" onClick={() => handleDelete(f.id, f.name)}>삭제</button>
                 </div>
               </div>
