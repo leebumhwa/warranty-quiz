@@ -39,7 +39,7 @@ export default function Ranking() {
       <p className="page-subtitle">
         공식 퀴즈 결과를 기준으로 산정합니다. &nbsp;
         <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-          점수 = 누적 문제 수 × 0.6 + 평균 정답률 × 0.4
+          점수 = 누적 문제 수 × 0.5 + 평균 정답률 × 0.5
         </span>
       </p>
 
