@@ -38,7 +38,7 @@ app.use((err, req, res, next) => {
 async function seedAdmin() {
   const existing = await db.getUserByEmail('admin@warranty.com');
   if (!existing) {
-    await db.createUser('admin@warranty.com', bcrypt.hashSync('admin123', 10), '관리자', 'admin');
+    await db.createUser('admin@warranty.com', bcrypt.hashSync('admin123', 10), '관리자', 'admin', null, 'approved');
     console.log('기본 관리자 생성됨: admin@warranty.com / admin123');
   }
 }

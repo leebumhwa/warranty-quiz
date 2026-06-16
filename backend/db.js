@@ -18,12 +18,28 @@ const db = {
     const { data } = await supabase.from('users').select('*').eq('id', parseInt(id)).maybeSingle();
     return data || null;
   },
-  async createUser(email, password, name, role = 'user', privacyAgreedAt = null) {
+  async createUser(email, password, name, role = 'user', privacyAgreedAt = null, status = 'pending') {
     const existing = await db.getUserByEmail(email);
     if (existing) return null;
     const { data } = await supabase
       .from('users')
-      .insert({ email, password, name, role, privacy_agreed_at: privacyAgreedAt })
+      .insert({ email, password, name, role, privacy_agreed_at: privacyAgreedAt, status })
+      .select().single();
+    return data;
+  },
+  async getAllUsersForAdmin() {
+    const { data } = await supabase
+      .from('users')
+      .select('id, email, name, role, status, privacy_agreed_at, created_at')
+      .neq('role', 'admin')
+      .order('created_at', { ascending: false });
+    return data || [];
+  },
+  async updateUserStatus(id, status) {
+    const { data } = await supabase
+      .from('users')
+      .update({ status })
+      .eq('id', parseInt(id))
       .select().single();
     return data;
   },

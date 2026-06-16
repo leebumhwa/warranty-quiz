@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const POLICY_ROWS = [
@@ -68,8 +68,8 @@ export default function Register() {
   const [policyOpen, setPolicyOpen] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [pending, setPending] = useState(false);
   const { register } = useAuth();
-  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -85,13 +85,31 @@ export default function Register() {
     setLoading(true);
     try {
       await register(email, password, name, privacyAgreed);
-      navigate('/dashboard');
+      setPending(true);
     } catch (err) {
       setError(err.response?.data?.error || '회원가입에 실패했습니다.');
     } finally {
       setLoading(false);
     }
   };
+
+  if (pending) {
+    return (
+      <div className="auth-container">
+        <div className="card auth-card" style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '16px' }}>✅</div>
+          <h1 className="auth-title">가입 신청 완료</h1>
+          <p style={{ color: 'var(--text-muted)', lineHeight: 1.7, marginBottom: '24px' }}>
+            가입 신청이 접수되었습니다.<br />
+            관리자 승인 후 로그인이 가능합니다.
+          </p>
+          <Link to="/login" className="btn btn-primary" style={{ display: 'inline-block' }}>
+            로그인 페이지로 이동
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="auth-container">

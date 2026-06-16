@@ -31,10 +31,7 @@ export function AuthProvider({ children }) {
 
   const register = async (email, password, name, privacyAgreed = false) => {
     const res = await api.post('/auth/register', { email, password, name, privacyAgreed });
-    localStorage.setItem('token', res.data.token);
-    localStorage.setItem('user', JSON.stringify(res.data.user));
-    setUser(res.data.user);
-    return res.data.user;
+    return res.data;
   };
 
   const logout = () => {

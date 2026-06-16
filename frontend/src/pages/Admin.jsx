@@ -152,6 +152,8 @@ export default function Admin() {
   const [editingFileNotes, setEditingFileNotes] = useState(null);
   const [fileNotesValue, setFileNotesValue] = useState('');
   const [selectedResults, setSelectedResults] = useState(new Set());
+  const [members, setMembers] = useState([]);
+  const [memberMsg, setMemberMsg] = useState('');
 
   // File upload state
   const fileInputRef = useRef(null);
@@ -175,8 +177,9 @@ export default function Admin() {
   const loadSchedules = () => api.get('/schedules')
     .then(r => setSchedules(r.data.schedules))
     .catch(err => setSchedMsg(`일정 로드 실패: ${err.response?.data?.error || err.message}`));
+  const loadMembers = () => api.get('/auth/users').then(r => setMembers(r.data.users)).catch(() => {});
 
-  useEffect(() => { loadFiles(); loadQuizzes(); loadResults(); loadReports(); loadNotices(); loadSchedules(); }, []);
+  useEffect(() => { loadFiles(); loadQuizzes(); loadResults(); loadReports(); loadNotices(); loadSchedules(); loadMembers(); }, []);
 
   // --- File management ---
   const handleUpload = async (e) => {
@@ -371,7 +374,17 @@ export default function Admin() {
     <div className="page">
       <h1 className="page-title">관리자 패널</h1>
       <div className="tabs">
-        {[['files','파일 관리'],['source','소스 파일 관리'],['generate','퀴즈 생성'],['quizzes','퀴즈 관리'],['results','사용자 결과'],['reports',`신고 관리${reports.filter(r=>!r.resolved).length > 0 ? ` (${reports.filter(r=>!r.resolved).length})` : ''}`],['notices','보증 소식'],['schedules','일정 관리']].map(([key,label]) => (
+        {[
+          ['files','파일 관리'],
+          ['source','소스 파일 관리'],
+          ['generate','퀴즈 생성'],
+          ['quizzes','퀴즈 관리'],
+          ['results','사용자 결과'],
+          ['reports',`신고 관리${reports.filter(r=>!r.resolved).length > 0 ? ` (${reports.filter(r=>!r.resolved).length})` : ''}`],
+          ['notices','보증 소식'],
+          ['schedules','일정 관리'],
+          ['members',`회원 관리${members.filter(m=>m.status==='pending').length > 0 ? ` (${members.filter(m=>m.status==='pending').length})` : ''}`],
+        ].map(([key,label]) => (
           <button key={key} className={`tab-btn ${tab===key?'active':''}`} onClick={() => setTab(key)}>{label}</button>
         ))}
       </div>
@@ -822,6 +835,96 @@ export default function Admin() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Members tab */}
+      {tab === 'members' && (
+        <div>
+          <div className="card-title mb-4">
+            회원 관리 ({members.length}명 · 승인 대기 {members.filter(m => m.status === 'pending').length}명)
+          </div>
+          {memberMsg && (
+            <div className={`alert mb-4 ${memberMsg.includes('실패') ? 'alert-error' : 'alert-success'}`}>
+              {memberMsg}
+            </div>
+          )}
+          {members.length === 0 ? (
+            <div className="empty-state">가입한 회원이 없습니다.</div>
+          ) : (
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>이름</th>
+                      <th>이메일</th>
+                      <th>가입일</th>
+                      <th>상태</th>
+                      <th>작업</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {members.map(m => {
+                      const statusLabel = m.status === 'approved' ? '승인됨' : m.status === 'rejected' ? '거절됨' : '대기 중';
+                      const statusColor = m.status === 'approved' ? 'var(--success)' : m.status === 'rejected' ? 'var(--error)' : 'var(--warning, #f59e0b)';
+                      const statusBg = m.status === 'approved' ? 'var(--success-light)' : m.status === 'rejected' ? 'var(--error-light)' : '#fef3c7';
+                      return (
+                        <tr key={m.id}>
+                          <td style={{ fontWeight: 500 }}>{m.name}</td>
+                          <td className="text-muted text-sm">{m.email}</td>
+                          <td className="text-muted text-sm">{formatDate(m.created_at)}</td>
+                          <td>
+                            <span style={{
+                              padding: '2px 10px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 600,
+                              background: statusBg, color: statusColor,
+                            }}>
+                              {statusLabel}
+                            </span>
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              {m.status !== 'approved' && (
+                                <button className="btn btn-success btn-sm" onClick={async () => {
+                                  try {
+                                    await api.patch(`/auth/users/${m.id}/status`, { status: 'approved' });
+                                    setMemberMsg(`${m.name} 님을 승인했습니다.`);
+                                    setTimeout(() => setMemberMsg(''), 3000);
+                                    loadMembers();
+                                  } catch { setMemberMsg('승인 실패'); }
+                                }}>승인</button>
+                              )}
+                              {m.status !== 'rejected' && (
+                                <button className="btn btn-danger btn-sm" onClick={async () => {
+                                  if (!window.confirm(`${m.name} 님의 가입을 거절하시겠습니까?`)) return;
+                                  try {
+                                    await api.patch(`/auth/users/${m.id}/status`, { status: 'rejected' });
+                                    setMemberMsg(`${m.name} 님을 거절했습니다.`);
+                                    setTimeout(() => setMemberMsg(''), 3000);
+                                    loadMembers();
+                                  } catch { setMemberMsg('거절 실패'); }
+                                }}>거절</button>
+                              )}
+                              {m.status === 'rejected' && (
+                                <button className="btn btn-secondary btn-sm" onClick={async () => {
+                                  try {
+                                    await api.patch(`/auth/users/${m.id}/status`, { status: 'pending' });
+                                    setMemberMsg(`${m.name} 님을 대기 상태로 변경했습니다.`);
+                                    setTimeout(() => setMemberMsg(''), 3000);
+                                    loadMembers();
+                                  } catch { setMemberMsg('변경 실패'); }
+                                }}>대기로 변경</button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
