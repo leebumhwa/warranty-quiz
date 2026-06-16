@@ -425,12 +425,13 @@ const db = {
       const stats = userStats[id];
       const avgAccuracy = stats.total_questions > 0
         ? Math.round((stats.total_score / stats.total_questions) * 100) : 0;
-      const rankingScore = parseFloat((stats.total_questions * 0.5 + avgAccuracy * 0.5).toFixed(1));
+      const rankingScore = parseFloat((stats.total_score * 0.5 + avgAccuracy * 0.5).toFixed(1));
       return {
         user_id: id,
         user_name: userMap[id] || '알 수 없음',
         quiz_count: stats.count,
         total_questions: stats.total_questions,
+        total_score: stats.total_score,
         avg_accuracy: avgAccuracy,
         ranking_score: rankingScore,
       };

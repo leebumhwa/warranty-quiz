@@ -39,7 +39,7 @@ export default function Ranking() {
       <p className="page-subtitle">
         공식 퀴즈 결과를 기준으로 산정합니다. &nbsp;
         <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-          점수 = 누적 문제 수 × 0.5 + 평균 정답률 × 0.5
+          점수 = 누적 정답 수 × 0.5 + 평균 정답률 × 0.5
         </span>
       </p>
 
@@ -52,7 +52,7 @@ export default function Ranking() {
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>내 순위 — {myEntry.user_name}</div>
               <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                누적 문제 {myEntry.total_questions}개 · 평균 정답률 {myEntry.avg_accuracy}% · 응시 {myEntry.quiz_count}회
+                누적 정답 {myEntry.total_score}개 · 평균 정답률 {myEntry.avg_accuracy}% · 응시 {myEntry.quiz_count}회
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
@@ -72,7 +72,7 @@ export default function Ranking() {
               <tr>
                 <th style={{ padding: '12px 16px', background: 'var(--bg)', borderBottom: '1px solid var(--border)', width: '60px', textAlign: 'center' }}>순위</th>
                 <th style={{ padding: '12px 16px', background: 'var(--bg)', borderBottom: '1px solid var(--border)' }}>이름</th>
-                <th style={{ padding: '12px 16px', background: 'var(--bg)', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>누적 문제 수</th>
+                <th style={{ padding: '12px 16px', background: 'var(--bg)', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>누적 정답 수</th>
                 <th style={{ padding: '12px 16px', background: 'var(--bg)', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>평균 정답률</th>
                 <th style={{ padding: '12px 16px', background: 'var(--bg)', borderBottom: '1px solid var(--border)' }}>랭킹 점수</th>
               </tr>
@@ -94,7 +94,7 @@ export default function Ranking() {
                       )}
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'center', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
-                      {r.total_questions}개
+                      {r.total_score}개
                     </td>
                     <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>
                       <span style={{
