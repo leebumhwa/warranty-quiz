@@ -8,14 +8,14 @@ export function LeaderboardWidget() {
   const [data, setData] = useState([]);
 
   useEffect(() => {
-    api.get('/results/leaderboard').then(r => setData(r.data.leaderboard.slice(0, 5))).catch(() => {});
+    api.get('/ranking').then(r => setData(r.data.ranking.slice(0, 5))).catch(() => {});
   }, []);
 
   return (
     <div className="widget-card">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
         <div className="widget-label">🏆 랭킹</div>
-        <Link to="/leaderboard" style={{ fontSize: '0.7rem', color: 'var(--primary)', textDecoration: 'none' }}>전체 보기 →</Link>
+        <Link to="/ranking" style={{ fontSize: '0.7rem', color: 'var(--primary)', textDecoration: 'none' }}>전체 보기 →</Link>
       </div>
       {data.length === 0 ? (
         <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textAlign: 'center', padding: '8px 0' }}>아직 데이터가 없습니다.</div>
@@ -28,7 +28,7 @@ export function LeaderboardWidget() {
               </span>
               <span style={{ flex: 1, fontSize: '0.82rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.user_name}</span>
               <span style={{ fontSize: '0.78rem', fontWeight: 700, color: r.avg_accuracy >= 80 ? 'var(--success)' : r.avg_accuracy >= 60 ? 'var(--warning)' : 'var(--error)', flexShrink: 0 }}>
-                {r.avg_accuracy}%
+                {r.ranking_score}점
               </span>
             </li>
           ))}
