@@ -224,13 +224,17 @@ export default function Admin() {
       const res = await api.post('/quizzes/generate', {
         title: quizTitle, description: quizDesc,
         fileIds: selectedFiles, questionCount,
-      });
+      }, { timeout: 65000 });
       const count = res.data.questions.length;
       setGenMsg(`"${quizTitle}" 퀴즈가 생성되었습니다. (${count}개 문제)`);
       setQuizTitle(''); setQuizDesc(''); setSelectedFiles([]); setQuestionCount(10);
       loadQuizzes();
     } catch (err) {
-      setGenError(err.response?.data?.error || err.message || '퀴즈 생성에 실패했습니다.');
+      if (err.code === 'ECONNABORTED') {
+        setGenError('퀴즈 생성 시간이 초과됐습니다. 문제 수를 줄이거나 다시 시도해주세요.');
+      } else {
+        setGenError(err.response?.data?.error || err.message || '퀴즈 생성에 실패했습니다.');
+      }
     } finally {
       setGenerating(false);
     }
@@ -465,8 +469,8 @@ export default function Admin() {
                 value={quizDesc} onChange={e => setQuizDesc(e.target.value)} />
             </div>
             <div className="form-group">
-              <label className="form-label">문제 수 (1~50) *</label>
-              <input type="number" className="form-input" min={1} max={50}
+              <label className="form-label">문제 수 (1~30) *</label>
+              <input type="number" className="form-input" min={1} max={30}
                 value={questionCount} onChange={e => setQuestionCount(parseInt(e.target.value)||5)} />
             </div>
             <div className="form-group">

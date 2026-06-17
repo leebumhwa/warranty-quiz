@@ -76,13 +76,17 @@ function CreateQuizForm({ onSuccess }) {
       const res = await api.post('/quizzes/generate-private', {
         title: title.trim(),
         questionCount,
-      });
+      }, { timeout: 65000 });
       const count = res.data.questions?.length || questionCount;
       setSuccess(`"${res.data.quiz.title}" 퀴즈가 생성되었습니다. (${count}개 문제)`);
       setTitle(''); setQuestionCount(10);
       onSuccess();
     } catch (err) {
-      setError(err.response?.data?.error || '퀴즈 생성에 실패했습니다.');
+      if (err.code === 'ECONNABORTED') {
+        setError('퀴즈 생성 시간이 초과됐습니다. 문제 수를 줄이거나 다시 시도해주세요.');
+      } else {
+        setError(err.response?.data?.error || '퀴즈 생성에 실패했습니다.');
+      }
     } finally {
       setGenerating(false);
     }

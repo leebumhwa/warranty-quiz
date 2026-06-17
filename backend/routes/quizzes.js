@@ -138,7 +138,7 @@ router.post('/generate', authenticate, requireAdmin, async (req, res) => {
   if (!title || !fileIds || fileIds.length === 0) {
     return res.status(400).json({ error: '제목과 파일을 선택해주세요.' });
   }
-  const count = Math.min(Math.max(parseInt(questionCount) || 5, 1), 50);
+  const count = Math.min(Math.max(parseInt(questionCount) || 5, 1), 30);
 
   const files = await db.getFilesByIds(fileIds);
   if (files.length === 0) return res.status(400).json({ error: '선택된 파일을 찾을 수 없습니다.' });
