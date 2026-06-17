@@ -221,27 +221,16 @@ export default function Admin() {
     if (selectedFiles.length === 0) { setGenError('파일을 하나 이상 선택해주세요.'); return; }
     setGenerating(true); setGenError(''); setGenMsg('');
     try {
-      const token = localStorage.getItem('token');
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const res = await fetch(`${supabaseUrl}/functions/v1/generate-quiz`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          title: quizTitle, description: quizDesc,
-          fileIds: selectedFiles, questionCount,
-        }),
+      const res = await api.post('/quizzes/generate', {
+        title: quizTitle, description: quizDesc,
+        fileIds: selectedFiles, questionCount,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '퀴즈 생성에 실패했습니다.');
-      const count = data.questions.length;
+      const count = res.data.questions.length;
       setGenMsg(`"${quizTitle}" 퀴즈가 생성되었습니다. (${count}개 문제)`);
       setQuizTitle(''); setQuizDesc(''); setSelectedFiles([]); setQuestionCount(10);
       loadQuizzes();
     } catch (err) {
-      setGenError(err.message || '퀴즈 생성에 실패했습니다.');
+      setGenError(err.response?.data?.error || err.message || '퀴즈 생성에 실패했습니다.');
     } finally {
       setGenerating(false);
     }
